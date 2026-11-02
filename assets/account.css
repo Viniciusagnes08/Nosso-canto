@@ -279,3 +279,29 @@
     align-items: center;
   }
 }
+
+/* Keep the on-device entry obvious while the personal auth provider is not ready. */
+.account-unconfigured #accountForm,
+.account-unconfigured #googleLogin,
+.account-unconfigured .account-links {
+  display: none;
+}
+.account-local-access {
+  margin: 24px 0 25px;
+  padding: 20px 0 18px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+.account-local-access .account-submit {
+  width: 100%;
+  min-height: 54px;
+}
+.account-local-note {
+  margin: 13px 0 0;
+  font-size: 12px;
+  line-height: 1.65;
+  color: var(--muted);
+}
+.account-unconfigured .account-form-panel {
+  padding-block: clamp(25px, 5vw, 64px);
+}
