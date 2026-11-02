@@ -197,3 +197,133 @@ body[data-auth-mode="app"] .login-screen { display: none; }
   .login-note-front { animation: none; }
   .login-screen *, .login-screen *::before, .login-screen *::after { transition: none !important; }
 }
+
+/* Fluid responsive pass: 2026-11-02.
+   Fit the primary action on short notebooks and preserve a readable mobile flow. */
+.login-screen {
+  --login-gutter: clamp(18px, 3.3vw, 64px);
+  width: 100%;
+  min-width: 0;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+}
+.login-left,
+.login-right { min-width: 0; }
+.login-left {
+  padding: clamp(20px, 2.3vh, 38px) var(--login-gutter);
+  min-height: 100dvh;
+  gap: clamp(8px, 1.6vh, 24px);
+}
+.login-left-top,
+.login-left-copy,
+.login-left-foot { flex-shrink: 0; }
+.login-artwork {
+  flex: 1 1 auto;
+  min-height: 150px;
+  height: clamp(170px, 29vh, 340px);
+  max-height: 340px;
+  margin: 0 auto;
+}
+.login-left-copy { max-width: 610px; }
+.login-left-copy h1 { font-size: clamp(34px, 4.05vw, 66px); line-height: 1.045; }
+.login-left-copy > p:last-child { font-size: clamp(12px, 1vw, 14px); }
+.login-note-back { width: min(47%, 220px); min-height: 68%; }
+.login-note-front { width: min(53%, 245px); min-height: 70%; }
+.login-note-front p { font-size: clamp(18px, 2.1vw, 27px); }
+.login-right {
+  padding: clamp(18px, 3vh, 44px) clamp(20px, 4vw, 68px);
+  min-height: 100dvh;
+  justify-content: space-between;
+}
+.login-right-inner { padding: clamp(12px, 1.6vh, 26px) 0; }
+.login-brand { margin-bottom: clamp(18px, 4vh, 54px); }
+.login-right h2 { font-size: clamp(30px, 3.2vw, 48px); line-height: 1.08; }
+.login-right-intro { margin-bottom: clamp(14px, 2.3vh, 25px); }
+.login-divider { margin: clamp(13px, 2vh, 23px) 0; }
+.login-preview-area { margin-top: clamp(12px, 2vh, 23px); padding-top: clamp(10px, 1.5vh, 18px); }
+.login-right-footer { flex-shrink: 0; }
+.login-primary-button, .login-google-button { min-height: 48px; }
+.login-input-wrap { min-height: 49px; }
+.login-right h2, .login-left-copy h1, .login-note-front p { overflow-wrap: break-word; }
+.login-input-wrap input { font-size: 16px; }
+
+@media (min-width: 721px) and (max-height: 820px) {
+  .login-left { gap: 5px; }
+  .login-left-top { margin-bottom: 2px; }
+  .login-artwork { height: clamp(135px, 23vh, 220px); min-height: 125px; max-height: 220px; }
+  .login-note-front { padding: 16px 19px; }
+  .login-note-front p { margin: 7px 0; font-size: clamp(17px, 1.7vw, 24px); }
+  .login-note-front > small { margin-top: 5px; }
+  .login-left-copy h1 { font-size: clamp(32px, 3.55vw, 53px); margin-bottom: 9px; }
+  .login-left-copy > p:last-child { line-height: 1.5; }
+  .login-left-eyebrow { margin-bottom: 9px; }
+  .login-left-foot { margin-top: 6px; }
+  .login-right-inner { padding: 4px 0; }
+  .login-brand { margin-bottom: clamp(14px, 2.6vh, 24px); }
+  .login-right-eyebrow { margin-bottom: 9px; }
+  .login-right h2 { margin-bottom: 9px; font-size: clamp(30px, 2.9vw, 43px); }
+  .login-right-intro { line-height: 1.45; margin-bottom: 12px; }
+  .login-email-help { margin-top: 7px; }
+  .login-primary-button { margin-top: 9px; }
+  .login-divider { margin: 12px 0; }
+  .login-preview-area { margin-top: 12px; padding-top: 10px; }
+  .login-preview-area p { margin-top: 3px; }
+  .login-right-footer { padding-top: 6px; }
+}
+@media (min-width: 721px) and (max-height: 620px) {
+  .login-left { min-height: 620px; }
+  .login-right { min-height: 620px; }
+}
+@media (min-width: 721px) and (max-width: 1100px) {
+  .login-screen { grid-template-columns: minmax(0, .9fr) minmax(0, 1.1fr); }
+  .login-left, .login-right { padding-inline: clamp(22px, 3vw, 36px); }
+  .login-left-copy h1 { font-size: clamp(31px, 4vw, 49px); }
+  .login-artwork { max-width: 380px; }
+  .login-note-back { left: 10%; }
+  .login-note-front { right: 7%; }
+}
+@media (max-width: 720px) {
+  .login-screen { display: flex; flex-direction: column; }
+  .login-left {
+    min-height: 0;
+    padding: calc(20px + env(safe-area-inset-top, 0px)) clamp(20px, 5vw, 32px) 27px;
+    gap: 0;
+    flex: 0 0 auto;
+  }
+  .login-left-top { margin-bottom: clamp(20px, 4vh, 32px); }
+  .login-artwork, .login-left-foot { display: none; }
+  .login-left-copy h1 { font-size: clamp(31px, 8vw, 44px); line-height: 1.07; margin: 0 0 10px; }
+  .login-left-copy > p:last-child { font-size: 12px; line-height: 1.55; max-width: 44ch; }
+  .login-right {
+    min-height: 0;
+    flex: 1 0 auto;
+    padding: clamp(25px, 5vw, 36px) clamp(20px, 5vw, 32px) calc(16px + env(safe-area-inset-bottom, 0px));
+    justify-content: flex-start;
+  }
+  .login-right-inner { width: min(100%, 430px); max-width: 100%; margin: 0 auto; padding: 0; }
+  .login-right h2 { font-size: clamp(31px, 7.8vw, 40px); margin-bottom: 10px; }
+  .login-right-intro { font-size: 13px; line-height: 1.55; margin-bottom: 20px; }
+  .login-right-footer { margin: 24px auto 0; }
+  .login-divider { margin: 16px 0; }
+  .login-preview-area { margin-top: 20px; }
+  .login-left-tag { max-width: 52%; text-align: center; line-height: 1.3; }
+}
+@media (max-width: 390px) {
+  .login-left-top { margin-bottom: 17px; }
+  .login-left { padding-bottom: 22px; }
+  .login-left-copy h1 { font-size: clamp(29px, 8vw, 36px); }
+  .login-right h2 { font-size: 31px; }
+  .login-right { padding-top: 21px; }
+}
+@media (orientation: landscape) and (max-height: 520px) and (max-width: 960px) {
+  .login-screen { display: flex; flex-direction: column; }
+  .login-left { min-height: 0; padding: 16px 24px; }
+  .login-left-top { margin-bottom: 10px; }
+  .login-artwork, .login-left-foot { display: none; }
+  .login-left-copy h1 { font-size: 30px; }
+  .login-left-copy > p:last-child { max-width: 70ch; }
+  .login-right { min-height: 0; padding: 22px 24px; }
+  .login-right-inner { width: min(100%, 460px); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .login-note-front { animation: none; }
+}
