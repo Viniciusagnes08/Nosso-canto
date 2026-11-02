@@ -29,7 +29,7 @@ export function renderAccount(message = "") {
   panel.hidden = true;
   root.hidden = false;
   const [title, subtitle] = titles[mode];
-  root.innerHTML = `<div class="account-story"><a class="account-brand" href="/">♡ entre nós.</a><span class="eyebrow">UM AMOR, DOIS LUGARES</span><h1>Perto,<br>mesmo <em>de longe.</em></h1><p>Um lugar para o seu dia, as nossas músicas e tudo aquilo que faz a saudade virar presença.</p><div class="orbit-art" aria-hidden="true"><span>♡</span><span>✧</span><span>♫</span></div><small>Pequenos gestos. Todos os dias.</small></div><section class="account-form-panel" aria-labelledby="accountTitle"><div class="account-form-inner"><span class="eyebrow">NOSSO CANTINHO</span><h2 id="accountTitle">${title}</h2><p>${subtitle}</p>${!authConfigured ? '<div class="notice">Estamos preparando a entrada no nosso cantinho. O login ainda não está disponível.</div>' : ""}<form id="accountForm">${mode !== "recovery" ? '<div class="field"><label for="accountEmail">Seu e-mail</label><input id="accountEmail" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="voce@exemplo.com"></div>' : ""}${!["reset", "magic"].includes(mode) ? `<div class="field"><label for="accountPassword">${mode === "recovery" ? "Nova senha" : "Sua senha"}</label><div class="password-wrap"><input id="accountPassword" name="password" type="password" autocomplete="${mode === "login" ? "current-password" : "new-password"}" required minlength="${mode === "login" ? 1 : 12}" maxlength="128"><button type="button" id="showPassword" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></div>${mode !== "login" ? '<p class="form-hint">Use pelo menos 12 caracteres.</p>' : ""}</div>` : ""}<p id="accountFeedback" role="status" aria-live="polite">${safe(message)}</p><button class="btn btn-primary account-submit" type="submit" ${!authConfigured ? "disabled" : ""}>${{ login: "Entrar no nosso cantinho", signup: "Criar minha conta", reset: "Enviar link de recuperação", recovery: "Salvar nova senha", magic: "Enviar meu link de acesso" }[mode]}</button></form>${mode === "login" ? `<button id="googleLogin" class="btn btn-line account-submit" style="margin-top:12px" ${authConfigured && config.GOOGLE_LOGIN_ENABLED === "true" ? "" : "disabled"}>Entrar com Google</button>` : ""}<div class="account-links">${mode === "login" ? '<button data-account-mode="magic">Entrar com link por e-mail</button><br><button data-account-mode="reset">Esqueci minha senha</button><p>Ainda não tem conta? <button data-account-mode="signup">Criar conta</button></p>' : '<button data-account-mode="login">Voltar para entrar</button>'}</div><p class="account-footnote">Cada um tem seu próprio acesso. Conectar Google ou Spotify é sempre uma escolha sua.</p></div></section>`;
+  root.innerHTML = `<div class="account-story"><a class="account-brand" href="/">♡ entre nós.</a><span class="eyebrow">UM AMOR, DOIS LUGARES</span><h1>Perto,<br>mesmo <em>de longe.</em></h1><p>Um lugar para o seu dia, as nossas músicas e tudo aquilo que faz a saudade virar presença.</p><div class="orbit-art" aria-hidden="true"><span>♡</span><span>✧</span><span>♫</span></div><small>Pequenos gestos. Todos os dias.</small></div><section class="account-form-panel" aria-labelledby="accountTitle"><div class="account-form-inner"><span class="eyebrow">NOSSO CANTINHO</span><h2 id="accountTitle">${title}</h2><p>${subtitle}</p>${!authConfigured ? '<div class="notice">Estamos preparando a entrada no nosso cantinho. O login ainda não está disponível.</div>' : ""}<form id="accountForm">${mode !== "recovery" ? '<div class="field"><label for="accountEmail">Seu e-mail</label><input id="accountEmail" name="email" type="email" autocomplete="email" required maxlength="254" placeholder="voce@exemplo.com"></div>' : ""}${!["reset", "magic"].includes(mode) ? `<div class="field"><label for="accountPassword">${mode === "recovery" ? "Nova senha" : "Sua senha"}</label><div class="password-wrap"><input id="accountPassword" name="password" type="password" autocomplete="${mode === "login" ? "current-password" : "new-password"}" required minlength="${mode === "login" ? 1 : 12}" maxlength="128"><button type="button" id="showPassword" aria-label="Mostrar senha" aria-pressed="false">Mostrar</button></div>${mode !== "login" ? '<p class="form-hint">Use pelo menos 12 caracteres.</p>' : ""}</div>` : ""}<p id="accountFeedback" role="status" aria-live="polite">${safe(message)}</p><button class="btn btn-primary account-submit" type="submit" ${!authConfigured ? "disabled" : ""}>${{ login: "Entrar no nosso cantinho", signup: "Criar minha conta", reset: "Enviar link de recuperação", recovery: "Salvar nova senha", magic: "Enviar meu link de acesso" }[mode]}</button></form>${mode === "login" ? `<button id="googleLogin" class="btn btn-line account-submit" style="margin-top:12px" ${authConfigured && config.GOOGLE_LOGIN_ENABLED === "true" ? "" : "disabled"}>Entrar com Google</button>` : ""}<div class="account-links">${mode === "login" ? '<button data-account-mode="magic">Entrar com link por e-mail</button><br><button data-account-mode="reset">Esqueci minha senha</button><p>Ainda não tem conta? <button data-account-mode="signup">Criar conta</button></p>' : '<button data-account-mode="login">Voltar para entrar</button>'}</div>${!authConfigured ? `<div class="account-local-access"><button id="localOnlyEntry" type="button" class="btn btn-soft account-submit">Entrar no meu espaço neste dispositivo</button><p class="account-local-note">Entrada local, sem conta: seus registros ficam apenas neste navegador, separados dos dados de qualquer usuário autenticado. Não há sincronização com outra pessoa ou acesso a Google/Spotify.</p></div>` : ""}<p class="account-footnote">Cada um tem seu próprio acesso. Conectar Google ou Spotify é sempre uma escolha sua.</p></div></section>`;
   root.querySelectorAll("[data-account-mode]").forEach((b) =>
     b.addEventListener("click", () => {
       mode = b.dataset.accountMode;
@@ -64,7 +64,26 @@ export function renderAccount(message = "") {
         event.target.disabled = false;
       }
     });
+  root.querySelector("#localOnlyEntry")?.addEventListener("click", enterLocalOnly);
   root.querySelector("form").addEventListener("submit", submit);
+}
+async function enterLocalOnly() {
+  // This is an isolated, on-device workspace. It must never grant Supabase or provider access.
+  if (authConfigured || started) return;
+  const button = root.querySelector("#localOnlyEntry");
+  if (button) button.disabled = true;
+  sessionStorage.removeItem("nc-active-user");
+  root.hidden = true;
+  panel.hidden = false;
+  try {
+    const app = await import("./app.js");
+    app.startApp({ id: "local-only-v1" }, { localOnly: true });
+    started = true;
+  } catch {
+    panel.hidden = true;
+    root.hidden = false;
+    renderAccount("Não foi possível abrir o modo local. Atualize a página e tente novamente.");
+  }
 }
 function friendly(error) {
   const code = error?.code;
