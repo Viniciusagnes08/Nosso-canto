@@ -55,7 +55,7 @@
 .cat-mood-capture label:not(.cat-mood-toggle) { display: block; font-size: 12px; font-weight: 720; color: #725862; margin: 14px 0 7px; }
 .cat-mood-capture textarea, .cat-mood-capture input[type=date] {
   width:100%; border-radius: 12px; border: 1px solid #e5d7d4; background: #fffcfa; padding: 11px 12px;
-  color: #57414c; font: 14px/1.5 inherit; resize: vertical;
+  color: #57414c; font: inherit; font-size: 14px; line-height: 1.5; resize: vertical;
 }
 .cat-mood-capture textarea { min-height: 93px; }
 .cat-mood-capture textarea:focus-visible, .cat-mood-capture input:focus-visible { outline: 3px solid #d9a6b3; outline-offset: 2px; }
