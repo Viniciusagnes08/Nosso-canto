@@ -1,0 +1,11 @@
+{
+  "name": "Entre Nos - Nosso Cantinho",
+  "short_name": "Entre Nos",
+  "description": "Uma rotina compartilhada para dois coracoes",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#fff9f4",
+  "theme_color": "#fff9f4",
+  "lang": "pt-BR",
+  "icons": [{"src":"./assets/icon.svg","sizes":"any","type":"image/svg+xml","purpose":"any maskable"}]
+}
