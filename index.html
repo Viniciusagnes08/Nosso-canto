@@ -8,6 +8,7 @@
   <link rel="manifest" href="./manifest.webmanifest" />
   <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
   <link rel="stylesheet" href="./assets/styles.css" />
+  <link rel="stylesheet" href="./assets/responsive.css" />
   <title>Entre N&oacute;s | Nosso cantinho</title>
 </head>
 <body>
@@ -33,7 +34,7 @@
       <header class="topbar">
         <a class="mobile-brand" href="#inicio" data-nav="inicio"><span class="heart-small">&#9829;</span> entre n&oacute;s<span class="brand-period">.</span></a>
         <div class="topbar-date" id="topbarDate"></div>
-        <button class="topbar-profile" data-nav="ajustes"><span class="profile-avatar" id="topAvatar">V</span><span class="only-desktop">Meu cantinho</span></button>
+        <button class="topbar-profile" data-nav="ajustes" aria-label="Abrir meu perfil e configurações"><span class="profile-avatar" id="topAvatar">V</span><span class="only-desktop">Meu cantinho</span></button>
       </header>
       <div id="modeBanner" class="mode-banner" role="status"></div>
       <main id="app" tabindex="-1" aria-live="polite"></main>
@@ -43,9 +44,10 @@
   <nav class="mobile-nav" aria-label="Navegacao movel">
     <button class="mobile-tab active" data-nav="inicio"><span>&#8962;</span>In&iacute;cio</button>
     <button class="mobile-tab" data-nav="diario"><span>&#9825;</span> Nosso dia</button>
+    <button class="mobile-tab" data-nav="calendario"><span>&#9638;</span>Agenda</button>
     <button class="mobile-tab" data-nav="desafios"><span>&#10038;</span>Desafios</button>
     <button class="mobile-tab" data-nav="memorias"><span>&#10047;</span>Fotos</button>
-    <button class="mobile-tab" data-nav="calendario"><span>&#9638;</span>Agenda</button>
+    <button class="mobile-tab" data-nav="musicas"><span>&#9835;</span>Trilha</button>
   </nav>
   <dialog id="entryDialog" class="entry-dialog" aria-labelledby="dialogTitle">
     <form id="entryForm" method="dialog" novalidate>
