@@ -1,7 +1,7 @@
 import { MOODS } from "./catalog.js";
 import { safe } from "./utils.js";
 
-export function moodPortrait(mood, className = "cat-mood-avatar") {
+function moodPortrait(mood, className = "cat-mood-avatar") {
   return `<img class="${className}" src="${safe(mood.sticker)}" alt="" width="160" height="160" loading="lazy" decoding="async">`;
 }
 
@@ -13,7 +13,7 @@ function stickerCard(mood, selected = false, mode = "full") {
   </button>`;
 }
 
-export function moodChoices(selected = "", mode = "full") {
+function moodChoices(selected = "", mode = "full") {
   const modes = ["full", "modal", "preview"];
   if (!modes.includes(mode)) mode = "full";
   const options = mode === "preview"
@@ -23,3 +23,5 @@ export function moodChoices(selected = "", mode = "full") {
     ${options.filter(Boolean).map(m => stickerCard(m, selected === m.id, mode)).join("")}
   </div>`;
 }
+
+export { moodChoices, moodPortrait };
