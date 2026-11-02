@@ -54,11 +54,18 @@ test("login fails closed when configuration is missing", async () => {
       .querySelector("#accountRoot")
       .textContent.includes("ainda não está disponível"),
   );
+  assert.ok(d.querySelector("#localOnlyEntry"), "on-device entry is available");
+  assert.equal(d.querySelector("#localOnlyEntry").disabled, false);
+  assert.equal(d.querySelector("#accountRoot").classList.contains("account-unconfigured"), true);
+  assert.ok(d.querySelector("#accountRoot").textContent.includes("sem conta"));
+
   dom.window.close();
 });
 test("login offers labelled fields, password visibility and recovery", async () => {
   const dom = await fixture(true),
     d = dom.window.document;
+  assert.equal(d.querySelector("#localOnlyEntry"), null, "local entry is hidden when real auth is configured");
+  assert.equal(d.querySelector("#accountRoot").classList.contains("account-unconfigured"), false);
   assert.equal(d.querySelector("#accountEmail").type, "email");
   assert.equal(
     d.querySelector("#accountPassword").autocomplete,
