@@ -113,7 +113,7 @@ assert(
   "challenge persisted",
 );
 console.log(
-  "OK: seven routes, state write, mood rendering and challenge creation",
+  "OK: eight routes, state write, mood rendering and challenge creation",
 );
 
 // Sticker and local persistence regression tests.
@@ -136,6 +136,18 @@ assert.equal(vm.runInContext("moodInfo('triste').name",context),"Tristinha", "hi
 assert.equal(vm.runInContext("moodInfo('normal').name",context),"Normal", "historical neutral mood preserved");
 vm.runInContext("addRecord({id:'cat-mood-test', type:'mood', owner:'self', date:localDay(),created:new Date().toISOString(),mood:'saudade',note:'um registro',shared:false})",context);
 assert(JSON.parse(local["entre-nos-local-v1"]).entries.some(e=>e.id==='cat-mood-test' && e.mood==='saudade'), "sticker mood uses canonical local records");
+// Exercise the actual inline submit handler (not merely the storage helper).
+const nativeFormData = context.FormData;
+context.FormData = class MockFormData {
+  constructor(form) { this.values = new Map(form.values || []); }
+  get(name) { return this.values.get(name) ?? null; }
+  has(name) { return this.values.has(name); }
+};
+vm.runInContext("document.querySelector('#entryDialog').close(); navigate('humor');selectMood('ansioso')",context);
+vm.runInContext("saveInlineMood({preventDefault(){}, target:{reportValidity(){return true},values:[['date',localDay()],['note','Estou com o coração acelerado']]}})",context);
+const savedMoods = JSON.parse(local["entre-nos-local-v1"]).entries.filter(e => e.type === "mood");
+assert(savedMoods.some(e => e.mood === "ansioso" && e.note === "Estou com o coração acelerado" && e.shared === false), "inline mood form persists private journal entry");
+context.FormData = nativeFormData;
 const illustrations = ["apaixonado","saudade","feliz","carente","cansado","bravo","ansioso","tranquilo"];
 for (const id of illustrations) {
   const svg = fs.readFileSync(__dirname+"/assets/stickers/cat-"+id+".svg","utf8");
