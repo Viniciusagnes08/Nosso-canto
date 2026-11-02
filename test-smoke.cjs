@@ -71,7 +71,7 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
-for (const file of ["catalog.js", "utils.js", "media.js", "app.js"]) {
+for (const file of ["catalog.js", "utils.js", "media.js", "mood-view.js", "app.js"]) {
   const source = fs
     .readFileSync(__dirname + "/assets/" + file, "utf8")
     .replace(/^import[\s\S]*?from\s+[\"'][^\"']+[\"'];/gm, "")
@@ -83,6 +83,7 @@ assert(
   "home hero rendered",
 );
 for (const route of [
+  "humor",
   "diario",
   "calendario",
   "desafios",
@@ -114,6 +115,33 @@ assert(
 console.log(
   "OK: seven routes, state write, mood rendering and challenge creation",
 );
+
+// Sticker and local persistence regression tests.
+assert.equal(vm.runInContext("MOODS.length", context), 8, "eight moods in catalog");
+assert.equal(vm.runInContext("new Set(MOODS.map(m=>m.id)).size", context), 8, "unique mood IDs");
+vm.runInContext("navigate('humor')", context);
+const moodPage = getNode("#app").innerHTML;
+assert(moodPage.includes('id="moodInlineForm"'), "dedicated mood form exists");
+assert(moodPage.includes('cat-apaixonado.svg') && moodPage.includes('cat-tranquilo.svg'), "real cat artwork in mood page");
+assert.equal((moodPage.match(/data-pick-mood=/g)||[]).length,8, "eight sticker buttons");
+assert(moodPage.includes('id="inlineSaveMood" disabled'), "save locked until selection");
+vm.runInContext("selectMood('carente')",context);
+assert.equal(vm.runInContext("moodChoice",context),"carente");
+assert.equal(getNode("#inlineSaveMood").disabled,false, "selection enables save");
+vm.runInContext("openModal('mood')",context);
+assert(getNode("#formFields").innerHTML.includes('cat-saudade.svg'), "modal uses sticker artwork");
+vm.runInContext("selectMood('saudade')",context);
+assert.equal(vm.runInContext("moodChoice",context),"saudade");
+assert.equal(vm.runInContext("moodInfo('triste').name",context),"Tristinha", "historical mood preserved");
+assert.equal(vm.runInContext("moodInfo('normal').name",context),"Normal", "historical neutral mood preserved");
+vm.runInContext("addRecord({id:'cat-mood-test', type:'mood', owner:'self', date:localDay(),created:new Date().toISOString(),mood:'saudade',note:'um registro',shared:false})",context);
+assert(JSON.parse(local["entre-nos-local-v1"]).entries.some(e=>e.id==='cat-mood-test' && e.mood==='saudade'), "sticker mood uses canonical local records");
+const illustrations = ["apaixonado","saudade","feliz","carente","cansado","bravo","ansioso","tranquilo"];
+for (const id of illustrations) {
+  const svg = fs.readFileSync(__dirname+"/assets/stickers/cat-"+id+".svg","utf8");
+  assert(svg.startsWith("<svg ") && svg.includes("</svg>"), "artwork "+id+" is a valid SVG document structure");
+}
+console.log("OK: eight SVG kitten moods, page/modal, selection and legacy compatibility");
 
 assert.equal(vm.runInContext("validUrl('javascript:alert(1)')", context), "#");
 vm.runInContext(
