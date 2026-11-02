@@ -603,7 +603,7 @@ function saveInlineMood(e) {
   try {
     const form = new FormData(e.target);
     const rawDate = String(form.get("date") || localDay());
-    const date = /^\\d{4}-\\d{2}-\\d{2}$/.test(rawDate) ? rawDate : localDay();
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : localDay();
     addRecord({
       id: uid(),
       type: "mood",
