@@ -138,8 +138,8 @@ function timeTip() {
 function partnerStatus() {
   const mine = latestMood("self");
   const theirs = latestMood("partner");
-  const mineGraphic = mine ? moodPortrait(moodInfo(mine.mood)) : "\u{1F90D}";
-  const theirGraphic = theirs ? moodPortrait(moodInfo(theirs.mood)) : "\u{1F90D}";
+  const mineGraphic = mine ? moodPortrait(moodInfo(mine.mood), "cat-mood-avatar", moodInfo(mine.mood).name) : "\u{1F90D}";
+  const theirGraphic = theirs ? moodPortrait(moodInfo(theirs.mood), "cat-mood-avatar", moodInfo(theirs.mood).name) : "\u{1F90D}";
   return `<div class="couple-list">
     <div class="person-line"><span class="person-avatar">${safe(initial(data.profile.self))}</span><div><strong>${safe(data.profile.self)}</strong><small>${mine ? displayDate(mine.date, { day: "2-digit", month: "short" }) : "Ainda sem registro"}</small></div><div class="person-right">${mineGraphic}</div></div>
     <div class="mini-divider"></div>
