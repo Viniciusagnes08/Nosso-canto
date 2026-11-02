@@ -15,6 +15,7 @@ import {
 const $ = (s) => document.querySelector(s);
 let STORE = null;
 let accountUser = null;
+let localOnly = false;
 function load() {
   try {
     const x = JSON.parse(localStorage.getItem(STORE));
@@ -102,8 +103,9 @@ function announce() {
   $("#miniName").textContent = data.profile.self;
   $("#miniAvatar").textContent = initial(data.profile.self);
   $("#topAvatar").textContent = initial(data.profile.self);
-  $("#modeBanner").innerHTML =
-    '<span><strong>Seu perfil neste aparelho:</strong> o login está ativo; os registros ainda não são sincronizados entre vocês.</span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
+  $("#modeBanner").innerHTML = localOnly
+    ? '<span><strong>Modo local ativo:</strong> registros guardados somente neste dispositivo. Não há conta nem sincronização entre vocês.</span><button class="text-link" data-nav="ajustes">Entender</button>'
+    : '<span><strong>Seu perfil neste aparelho:</strong> o login está ativo; os registros ainda não são sincronizados entre vocês.</span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
 }
 function navigate(next) {
   if (
@@ -379,7 +381,31 @@ function renderMusic() {
   return `${intro("PLAYLIST DO CORA\u00c7\u00c3O", "Nossa trilha sonora", "As m\u00fasicas que lembram os dois, que marcaram momentos ou que voc\u00eas querem ouvir juntos.", '<button class="btn btn-primary" data-open="music">+ Adicionar m\u00fasica</button>')}
  <div class="two-col"><section class="paper-card">${sec("M\u00fasicas especiais", "Guarde um link do Spotify, YouTube ou outro servi\u00e7o.")}${tracks.length ? `<div class="music-list">${tracks.map((e) => `<div class="music-card"><span class="music-cover">\u266b</span><div style="min-width:0"><strong>${safe(e.title)}</strong><small>${safe(e.artist || "Escolhida com carinho")}</small></div>${e.url ? `<a class="music-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir \u2197</a>` : ""}<button class="mini-action" data-delete="${safe(e.id)}" aria-label="Apagar m\u00fasica">\u00d7</button></div>`).join("")}</div>` : empty("\u266b", "A trilha sonora come\u00e7a aqui", "Toda hist\u00f3ria tem uma m\u00fasica especial. Qual \u00e9 a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma m\u00fasica</button>')}</section><div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">\u266b UMA IDEIA PARA OS DOIS</span><p class="tip-text">\u201cUma m\u00fasica pode ser a forma mais bonita de dizer: lembrei de voc\u00ea.\u201d</p></section><div class="notice">Conecte sua conta em Meu cantinho → Suas conexões para escolher favoritas ou músicas recentes. Nenhuma música é guardada automaticamente.</div></div></div>`;
 }
+function renderLocalSettings() {
+  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Você está usando a entrada local neste dispositivo.")}<div class="settings-grid">
+  <section class="paper-card">
+    ${sec("Meu perfil local", "Seus registros ficam somente neste navegador.")}
+    <p class="notice">Modo local sem conta: não compartilha dados com seu amor nem importa dados de Google Fotos, Agenda ou Spotify. Não use em um dispositivo compartilhado.</p>
+    <form id="profileForm">
+      <div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div>
+      <div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div>
+      <div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div>
+      <button class="btn btn-primary" type="submit">Salvar perfil local</button>
+    </form>
+    <div class="divider"></div><button class="btn btn-line" type="button" data-logout>Voltar à tela de entrada</button>
+  </section>
+  <section class="paper-card">
+    ${sec("Meus registros locais", "Guarde uma cópia antes de trocar de aparelho.")}
+    <p class="setting-note">Esta prévia mantém os dados em um espaço separado das contas autenticadas. Exportar o backup permite guardar suas anotações e fotos em um lugar privado.</p>
+    <div class="setting-actions"><button class="btn btn-soft" data-export type="button">Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div>
+    <p class="setting-note">Registros antigos são preservados separadamente e não são importados automaticamente.</p>
+    <button type="button" class="text-link" data-legacy-export>Exportar registros da versão anterior</button>
+    <div class="divider"></div><button class="btn btn-quiet" type="button" data-clear>Apagar os dados deste espaço local</button>
+  </section>
+  </div>`;
+}
 function renderSettings() {
+  if (localOnly) return renderLocalSettings();
   return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Seu perfil", "Cada pessoa entra com sua própria conta.")}<p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm"><div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div><button class="btn btn-primary">Salvar perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "Guarde uma cópia antes de trocar de aparelho.")}<p class="setting-note">O backup inclui suas fotos e anotações deste perfil. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Seus registros anteriores à criação do login foram preservados neste navegador. Eles não são atribuídos automaticamente a uma conta.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar os dados locais deste perfil</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você escolher. Fotos, eventos e músicas importados começam como privados.</p><p class="setting-note">Os registros ficam neste navegador, separados por perfil, e ainda não são sincronizados com outro aparelho. O login não criptografa o armazenamento local: use seu próprio dispositivo.</p><p class="setting-note">Desconectar uma conta não apaga as cópias que você já guardou aqui.</p></section></div>`;
 }
 
@@ -967,13 +993,16 @@ if (
 )
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 
-export function startApp(user) {
+export function startApp(user, options = {}) {
   if (!user?.id) throw new Error("Entre para continuar.");
+  localOnly = options.localOnly === true;
+  if (localOnly && user.id !== "local-only-v1")
+    throw new Error("Perfil local inválido.");
   accountUser = user;
-  STORE = "entre-nos-user-v1:" + user.id;
-  setMediaUser(user.id);
+  STORE = localOnly ? "entre-nos-local-isolated-v1" : "entre-nos-user-v1:" + user.id;
+  setMediaUser(localOnly ? "local-isolated-v1" : user.id);
   data = load();
-  initConnections(user, {
+  if (!localOnly) initConnections(user, {
     refresh: render,
     toast,
     importRecords: async (records, { blob } = {}) => {
@@ -1013,6 +1042,10 @@ export function startApp(user) {
   });
   document.addEventListener("click", async (event) => {
     if (event.target.closest("[data-logout]")) {
+      if (localOnly) {
+        location.replace("/");
+        return;
+      }
       try {
         await logout();
       } catch (error) {
@@ -1034,7 +1067,7 @@ export function startApp(user) {
       } finally {
         STORE = oldStore;
         data = oldData;
-        setMediaUser(user.id);
+        setMediaUser(localOnly ? "local-isolated-v1" : user.id);
       }
     }
   });
