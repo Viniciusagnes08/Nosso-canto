@@ -1,8 +1,8 @@
 import { MOODS } from "./catalog.js";
 import { safe } from "./utils.js";
 
-function moodPortrait(mood, className = "cat-mood-avatar") {
-  return `<img class="${className}" src="${safe(mood.sticker)}" alt="" width="160" height="160" loading="lazy" decoding="async">`;
+function moodPortrait(mood, className = "cat-mood-avatar", description = "") {
+  return `<img class="${safe(className)}" src="${safe(mood.sticker)}" alt="${safe(description)}" width="160" height="160" loading="lazy" decoding="async">`;
 }
 
 function stickerCard(mood, selected = false, mode = "full") {
