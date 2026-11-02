@@ -1,5 +1,6 @@
 import { safe, uid, localDay, displayDate, dateTime } from './utils.js';
-import { MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
+import { MOODS, LEGACY_MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
+import { moodChoices, moodPortrait } from "./mood-view.js";
 import {
   mediaPut,
   mediaGet,
@@ -37,7 +38,7 @@ let data = load(),
   selectedDay = localDay(),
   dialogType = "",
   dialogMeta = null,
-  moodChoice = "feliz",
+  moodChoice = "",
   tipRemote = "";
 function persist() {
   try {
@@ -48,6 +49,10 @@ function persist() {
       "Não foi possível salvar. Exporte seus dados e libere espaço.",
     );
   }
+}
+function addRecord(record) {
+  data.entries.push(record);
+  persist();
 }
 function ownItems(type) {
   return data.entries
@@ -62,7 +67,9 @@ function latestMood(owner = "self") {
   );
 }
 function moodInfo(id) {
-  return MOODS.find((x) => x.id === id) || MOODS[2];
+  return MOODS.find((x) => x.id === id) ||
+    LEGACY_MOODS.find((x) => x.id === id) ||
+    { id: "unknown", name: "Humor registrado", sticker: "./assets/stickers/cat-tranquilo.svg" };
 }
 function initial(name) {
   return (
@@ -89,6 +96,7 @@ function navigate(next) {
   if (
     ![
       "inicio",
+      "humor",
       "diario",
       "calendario",
       "desafios",
@@ -120,9 +128,6 @@ function sec(title, desc = "", action = "") {
 function empty(icon, title, desc, action = "") {
   return `<div class="empty-state ${action ? "" : "large-empty"}"><div class="empty-icon">${icon}</div><strong>${title}</strong><p>${desc}</p>${action}</div>`;
 }
-function moodChoices(selected = "", mini = false) {
-  return `<div class="mood-row ${mini ? "modal-moods" : ""}">${MOODS.map((m) => `<button type="button" data-pick-mood="${m.id}" class="mood-option ${selected === m.id ? "selected" : ""}" aria-pressed="${selected === m.id}"><span>${m.emoji}</span>${m.name}</button>`).join("")}</div>`;
-}
 function timeTip() {
   const index = Math.floor(
     (new Date(localDay() + "T12:00:00") - new Date("2026-01-01T12:00:00")) /
@@ -133,7 +138,13 @@ function timeTip() {
 function partnerStatus() {
   const mine = latestMood("self");
   const theirs = latestMood("partner");
-  return `<div class="couple-list"><div class="person-line"><span class="person-avatar">${safe(initial(data.profile.self))}</span><div><strong>${safe(data.profile.self)}</strong><small>${mine ? displayDate(mine.date, { day: "2-digit", month: "short" }) : "Ainda sem registro"}</small></div><div class="person-right">${mine ? moodInfo(mine.mood).emoji : "\u{1F90D}"}</div></div><div class="mini-divider"></div><div class="person-line"><span class="person-avatar partner">${safe(initial(data.profile.partner))}</span><div><strong>${safe(data.profile.partner)}</strong><small>${theirs ? displayDate(theirs.date, { day: "2-digit", month: "short" }) : "Esperando conex\u00e3o entre contas"}</small></div><div class="person-right">${theirs ? moodInfo(theirs.mood).emoji : "\u{1F90D}"}</div></div></div>`;
+  const mineGraphic = mine ? moodPortrait(moodInfo(mine.mood), "cat-mood-avatar", moodInfo(mine.mood).name) : "\u{1F90D}";
+  const theirGraphic = theirs ? moodPortrait(moodInfo(theirs.mood), "cat-mood-avatar", moodInfo(theirs.mood).name) : "\u{1F90D}";
+  return `<div class="couple-list">
+    <div class="person-line"><span class="person-avatar">${safe(initial(data.profile.self))}</span><div><strong>${safe(data.profile.self)}</strong><small>${mine ? displayDate(mine.date, { day: "2-digit", month: "short" }) : "Ainda sem registro"}</small></div><div class="person-right">${mineGraphic}</div></div>
+    <div class="mini-divider"></div>
+    <div class="person-line"><span class="person-avatar partner">${safe(initial(data.profile.partner))}</span><div><strong>${safe(data.profile.partner)}</strong><small>${theirs ? displayDate(theirs.date, { day: "2-digit", month: "short" }) : "Esperando conexão entre contas"}</small></div><div class="person-right">${theirGraphic}</div></div>
+  </div>`;
 }
 function daysTogether() {
   if (!data.profile.anniversary) return null;
@@ -147,7 +158,7 @@ function formatEntry(e, showPhoto = true) {
   const title =
     e.title || (mood ? "Me senti " + mood.name.toLowerCase() : t.label);
   const note = e.note || e.description || "";
-  return `<article class="timeline-item"><span class="timeline-emoji" aria-hidden="true">${mood ? mood.emoji : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto adicionada por voc\u00ea" data-photo="${safe(e.photoId)}">` : ""}</div><div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div></article>`;
+  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto adicionada por voc\u00ea" data-photo="${safe(e.photoId)}">` : ""}</div><div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div></article>`;
 }
 function validUrl(url) {
   try {
@@ -189,7 +200,7 @@ function renderHome() {
   <section class="paper-card">${sec("Pr\u00f3ximos momentos", "Um encontro, uma chamada ou um compromisso especial.", '<button class="text-link" data-nav="calendario">Abrir agenda \u2192</button>')}${nextEvent ? `<div class="soft-highlight row-between"><div><span class="eyebrow">EST\u00c1 CHEGANDO</span><h3 style="margin:0 0 7px;font-size:17px">${safe(nextEvent.title)}</h3><span class="small muted">${displayDate(nextEvent.date, { weekday: "long", day: "numeric", month: "long" })}</span></div><span class="app-icon">\u{1F48C}</span></div>` : empty("\u{1F4C6}", "Planejem um momento a dois", "Marquem uma chamada, um jantar virtual ou o pr\u00f3ximo encontro.", '<button class="btn btn-soft" data-open="event">Adicionar um momento</button>')}</section>
  </div><div class="stack">
   <section class="paper-card">${sec("Como estamos hoje", "Um check-in sem cobran\u00e7as.")}${partnerStatus()}<div style="margin-top:17px"><button class="btn btn-soft" data-open="mood">Registrar meu humor \u2192</button></div></section>
-  <section class="paper-card">${sec("E voc\u00ea, como se sente?", "Um minuto para olhar para dentro.")}${moodChoices("")}<p class="mood-note">N\u00e3o existe sentimento errado. Escolha o que combina com o agora.</p></section>
+  <section class="paper-card">${sec("E voc\u00ea, como se sente?", "Escolha seu gatinho do dia.", '<button class="text-link" data-nav="humor">Ver todos →</button>')}${moodChoices("", "preview")}<p class="mood-note">N\u00e3o existe sentimento errado. Escolha a figurinha que combina com o agora.</p></section>
   <section class="paper-card daily-tip"><span class="tip-badge">\u2727 UM CARINHO POR DIA</span><p class="tip-text">\u201c${safe(timeTip())}\u201d</p><span class="tip-foot">Uma ideia simples para se conectar hoje.</span><div style="margin-top:13px"><button class="btn btn-small btn-white" type="button" data-surprise>Conselho surpresa (API)</button><p class="small muted" id="externalTip" aria-live="polite" style="margin:10px 0 0"></p></div></section>
   <section class="paper-card">${sec("Nossas mem\u00f3rias", "Fotografias que aquecem a saudade.", `<button class="text-link" data-nav="memorias">Ver fotos \u2192</button>`)}${
     media.length
@@ -208,6 +219,42 @@ function renderHome() {
         )
   }</section>
  </div></div>`;
+}
+function renderMoodScreen() {
+  const latest = latestMood("self");
+  const latestInfo = latest ? moodInfo(latest.mood) : null;
+  const current = MOODS.find((m) => m.id === moodChoice);
+  return `${intro("NOSSO HUMOR DO DIA", "Como está seu coração hoje?", "Escolha a figurinha de gatinho que mais combina com você agora. Você pode contar um pouquinho sobre o seu dia, se quiser.")}
+  <section class="cat-mood-page" aria-label="Registro de humor">
+    <div class="cat-mood-top">
+      <div><span class="eyebrow">PEQUENOS SENTIMENTOS, GRANDES HISTÓRIAS</span><h2>Um gatinho para cada sentimento.</h2><p>Todo humor merece acolhimento. Escolha sem pressa e registre apenas aquilo que quiser compartilhar.</p></div>
+      <span class="cat-mood-top-note">♡ Um carinho por dia</span>
+    </div>
+    <div class="cat-mood-layout">
+      <div class="cat-mood-main"><p class="cat-mood-subheading">ESCOLHA SUA FIGURINHA</p>${moodChoices(moodChoice, "full")}</div>
+      <aside class="cat-mood-side">
+        <form id="moodInlineForm" class="cat-mood-capture">
+          <span class="eyebrow">SEU REGISTRO</span>
+          <h3>Guardar esse momento ♡</h3>
+          <p id="moodChosen" aria-live="polite">${current ? current.name + ": " + current.phrase : "Primeiro, escolha um gatinho que combine com você."}</p>
+          <label for="moodNote">Quer contar mais? <span class="muted">(opcional)</span></label>
+          <textarea id="moodNote" name="note" rows="3" maxlength="1500" placeholder="O que fez você se sentir assim?"></textarea>
+          <label for="moodDate">Dia do registro</label>
+          <input type="date" id="moodDate" name="date" value="${localDay()}" required>
+          <label class="cat-mood-toggle" for="moodShared">
+            <input type="checkbox" id="moodShared" name="shared">
+            Compartilhar com meu amor quando a sincronização estiver ativa
+          </label>
+          <button type="submit" class="cat-mood-save" id="inlineSaveMood" ${current ? "" : "disabled"}>Salvar meu humor ♡</button>
+          <p id="moodInlineFeedback" class="cat-mood-feedback" role="status" aria-live="polite"></p>
+          <div class="cat-mood-latest">
+            <div class="cat-mood-latest-header">SEU ÚLTIMO REGISTRO DE HOJE</div>
+            ${latestInfo ? `<div class="cat-mood-last-row">${moodPortrait(latestInfo)}<div><strong>${safe(latestInfo.name)}</strong><small>${displayDate(latest.date, { day: "2-digit", month: "long" })}</small></div></div>` : '<p>Ainda não há registro de humor hoje. Seu primeiro gatinho está esperando!</p>'}
+          </div>
+        </form>
+      </aside>
+    </div>
+  </section>`;
 }
 function renderJournal() {
   const tags = [
@@ -319,6 +366,7 @@ function render() {
   announce();
   const routes = {
     inicio: renderHome,
+    humor: renderMoodScreen,
     diario: renderJournal,
     calendario: renderCalendar,
     desafios: renderChallenges,
@@ -348,13 +396,13 @@ const shareField = (checked = true) =>
 function openModal(type, meta) {
   dialogType = type;
   dialogMeta = meta || null;
-  moodChoice = "feliz";
+  moodChoice = "";
   let title = "",
     fields = "";
   switch (type) {
     case "mood":
       title = "Como est\u00e1 seu cora\u00e7\u00e3o?";
-      fields = `<p class="setting-note">Escolha o que est\u00e1 sentindo. O registro pode ficar s\u00f3 para voc\u00ea.</p>${moodChoices(moodChoice, true)}${noteField("O que fez voc\u00ea se sentir assim?")}${dateField()}${shareField(false)}`;
+      fields = `<p class="setting-note">Escolha o que est\u00e1 sentindo. O registro pode ficar s\u00f3 para voc\u00ea.</p>${moodChoices(moodChoice, "modal")}${noteField("O que fez voc\u00ea se sentir assim?")}${dateField()}${shareField(false)}`;
       break;
     case "meal":
       title = "O que voc\u00ea comeu?";
@@ -483,6 +531,8 @@ async function saveModal(e) {
       shared: form.has("shared"),
     };
     if (type === "mood") {
+      if (!MOODS.some((m) => m.id === moodChoice))
+        throw new Error("Escolha uma figurinha antes de salvar.");
       record.mood = moodChoice;
       record.title = "";
     }
@@ -528,8 +578,7 @@ async function saveModal(e) {
     }
     if (!record.title && !["mood", "proof"].includes(type))
       throw new Error("Preencha o t\u00edtulo do registro.");
-    data.entries.push(record);
-    persist();
+    addRecord(record);
     $("#entryDialog").close();
     render();
     toast("Seu registro foi guardado com carinho \u2661");
@@ -540,6 +589,40 @@ async function saveModal(e) {
     b.disabled = false;
   }
 }
+function saveInlineMood(e) {
+  e.preventDefault();
+  const feedback = $("#moodInlineFeedback");
+  const button = $("#inlineSaveMood");
+  if (!MOODS.some((m) => m.id === moodChoice)) {
+    feedback.textContent = "Escolha uma figurinha antes de salvar.";
+    return;
+  }
+  if (!e.target.reportValidity()) return;
+  button.disabled = true;
+  feedback.textContent = "";
+  try {
+    const form = new FormData(e.target);
+    const rawDate = String(form.get("date") || localDay());
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : localDay();
+    addRecord({
+      id: uid(),
+      type: "mood",
+      owner: "self",
+      created: new Date().toISOString(),
+      date,
+      title: "",
+      mood: moodChoice,
+      note: String(form.get("note") || "").trim().slice(0, 1500),
+      shared: form.has("shared"),
+    });
+    moodChoice = "";
+    render();
+    toast("Seu humor foi salvo com carinho ♡");
+  } catch (err) {
+    feedback.textContent = err?.message || "Não foi possível salvar o humor.";
+    button.disabled = false;
+  }
+}
 function selectMood(id) {
   if (!MOODS.some((m) => m.id === id)) return;
   moodChoice = id;
@@ -547,6 +630,13 @@ function selectMood(id) {
     b.classList.toggle("selected", b.dataset.pickMood === id);
     b.setAttribute("aria-pressed", String(b.dataset.pickMood === id));
   });
+  const save = document.querySelector("#inlineSaveMood");
+  if (save) save.disabled = false;
+  const chosen = document.querySelector("#moodChosen");
+  const info = MOODS.find((m) => m.id === id);
+  if (chosen && info) chosen.textContent = info.name + ": " + info.phrase;
+  const feedback = document.querySelector("#moodInlineFeedback");
+  if (feedback) feedback.textContent = "";
 }
 async function addPreset(index) {
   const p = PRESETS[index];
@@ -720,9 +810,9 @@ window.addEventListener("click", async (e) => {
   const mood = e.target.closest("[data-pick-mood]");
   if (mood) {
     const id = mood.dataset.pickMood;
-    if ($("#entryDialog").open) selectMood(id);
+    if ($("#entryDialog").open || tab === "humor") selectMood(id);
     else {
-      openModal("mood");
+      navigate("humor");
       selectMood(id);
     }
     return;
@@ -804,6 +894,7 @@ window.addEventListener("click", async (e) => {
 });
 document.addEventListener("submit", (e) => {
   if (e.target.id === "entryForm") saveModal(e);
+  if (e.target.id === "moodInlineForm") saveInlineMood(e);
   if (e.target.id === "profileForm") {
     e.preventDefault();
     const form = new FormData(e.target);
@@ -832,6 +923,7 @@ if (location.hash) {
   if (
     [
       "inicio",
+      "humor",
       "diario",
       "calendario",
       "desafios",

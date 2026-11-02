@@ -1,0 +1,18 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320" viewBox="0 0 320 320" role="img" aria-labelledby="title"><title id="title">Gatinho bravo</title>
+<defs><linearGradient id="fur" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#EFE3DA"/><stop offset="1" stop-color="#C7B4B0"/></linearGradient><linearGradient id="body" x1="0" x2=".7" y1="0" y2="1"><stop stop-color="#C7B4B0"/><stop offset="1" stop-color="#EAAB97"/></linearGradient></defs>
+<g stroke-linejoin="round" stroke-linecap="round">
+<path d="M247 82 l21 -22 m-16 24 l25 -4" fill="none" stroke="#D78893" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M0 -19 Q3 -4 18 0 Q3 4 0 19 Q-3 4 -18 0 Q-3 -4 0 -19Z" transform="translate(55 58) scale(0.53)" fill="#E6AE9B" stroke="#fffaf6" stroke-width="3"/>
+<path d="M210 256 Q277 244 259 207 Q247 190 234 209 Q245 232 215 222" fill="none" stroke="#fffaf6" stroke-width="23"/>
+<path d="M210 256 Q277 244 259 207 Q247 190 234 209 Q245 232 215 222" fill="none" stroke="#B68F94" stroke-width="11"/>
+<ellipse cx="160" cy="251" rx="78" ry="48" fill="url(#body)" stroke="#fffaf6" stroke-width="17"/>
+<ellipse cx="160" cy="251" rx="78" ry="48" fill="none" stroke="#65464F" stroke-width="4.2" opacity=".7"/>
+<path d="M74 151 C66 132 62 98 68 84 Q77 69 111 107 Q158 91 205 107 Q240 69 252 84 C261 96 256 135 248 153 Q259 207 210 228 Q160 249 110 228 Q61 207 74 151Z" fill="url(#fur)" stroke="#fffdf8" stroke-width="17"/>
+<path d="M74 151 C66 132 62 98 68 84 Q77 69 111 107 Q158 91 205 107 Q240 69 252 84 C261 96 256 135 248 153 Q259 207 210 228 Q160 249 110 228 Q61 207 74 151Z" fill="none" stroke="#65464F" stroke-width="5.3"/>
+<path d="M79 103 Q84 98 103 119 Q88 121 78 133Z" fill="#EAAB97" opacity=".75"/><path d="M244 103 Q237 97 218 119 Q235 120 245 132Z" fill="#EAAB97" opacity=".75"/>
+<path d="M145 117 Q160 126 175 117" fill="none" stroke="#fff9ef" stroke-width="4" opacity=".5"/>
+<path d="M105 143 l34 12" fill="none" stroke="#65464F" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><path d="M184 155 l33 -12" fill="none" stroke="#65464F" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/><circle cx="120" cy="167" r="6" fill="#65464F" opacity="1" stroke="none" stroke-width="0"/><circle cx="201" cy="167" r="6" fill="#65464F" opacity="1" stroke="none" stroke-width="0"/><path d="M151 170 Q160 178 169 170 Q160 169 151 170Z" fill="#C9899D" stroke="#835C61" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M148 190 Q159 181 172 190" fill="none" stroke="#65464F" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><circle cx="113" cy="184" r="14" fill="#EFA4B2" opacity="0.45" stroke="none" stroke-width="0"/><circle cx="207" cy="184" r="14" fill="#EFA4B2" opacity="0.45" stroke="none" stroke-width="0"/>
+<path d="M109 179 L73 174 M109 191 L77 199 M210 179 L246 174 M210 191 L243 199" fill="none" stroke="#65464F" stroke-width="3.5" opacity=".7"/>
+<ellipse cx="128" cy="277" rx="27" ry="14" fill="#C7B4B0" stroke="#fffdf8" stroke-width="7"/><ellipse cx="192" cy="277" rx="27" ry="14" fill="#C7B4B0" stroke="#fffdf8" stroke-width="7"/>
+<path d="M124 277 l2 6 M134 277 l2 6 M188 277 l-2 6 M199 277 l-2 6" stroke="#65464F" stroke-width="3" opacity=".5"/>
+<path d="M111 260 l24 -5" fill="none" stroke="#805B5E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/><path d="M184 255 l24 5" fill="none" stroke="#805B5E" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+</g></svg>

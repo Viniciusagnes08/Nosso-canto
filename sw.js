@@ -1,4 +1,4 @@
-const CACHE = "entre-nos-shell-v3";
+const CACHE = "entre-nos-shell-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -11,6 +11,16 @@ const ASSETS = [
   "./assets/catalog.js",
   "./assets/utils.js",
   "./assets/media.js",
+  "./assets/mood-view.js",
+  "./assets/mood.css",
+  "./assets/stickers/cat-apaixonado.svg",
+  "./assets/stickers/cat-saudade.svg",
+  "./assets/stickers/cat-feliz.svg",
+  "./assets/stickers/cat-carente.svg",
+  "./assets/stickers/cat-cansado.svg",
+  "./assets/stickers/cat-bravo.svg",
+  "./assets/stickers/cat-ansioso.svg",
+  "./assets/stickers/cat-tranquilo.svg",
   "./assets/icon.svg",
   "./manifest.webmanifest",
 ];
