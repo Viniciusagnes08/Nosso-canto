@@ -1,5 +1,8 @@
-import { safe, uid, localDay, displayDate, dateTime } from './utils.js';
-import { MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
+import { connectionCards, initConnections } from "./connections.js";
+import { logout } from "./auth.js";
+import { safe, uid, localDay, displayDate, dateTime } from "./utils.js";
+import { MOODS, LEGACY_MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
+import { moodChoices, moodPortrait } from "./mood-view.js";
 import {
   mediaPut,
   mediaGet,
@@ -7,9 +10,11 @@ import {
   mediaClear,
   compress,
   attachImages,
+  setMediaUser,
 } from "./media.js";
 const $ = (s) => document.querySelector(s);
-const STORE = "entre-nos-local-v1";
+let STORE = null;
+let accountUser = null;
 function load() {
   try {
     const x = JSON.parse(localStorage.getItem(STORE));
@@ -29,7 +34,10 @@ function load() {
     entries: [],
   };
 }
-let data = load(),
+let data = {
+    profile: { self: "Você", partner: "Seu amor", anniversary: "" },
+    entries: [],
+  },
   tab = "inicio",
   filter = "todos",
   calendarMonth = new Date().getMonth(),
@@ -37,10 +45,11 @@ let data = load(),
   selectedDay = localDay(),
   dialogType = "",
   dialogMeta = null,
-  moodChoice = "feliz",
+  moodChoice = "",
   tipRemote = "";
 function persist() {
   try {
+    if (!STORE) throw new Error("Entre para salvar.");
     localStorage.setItem(STORE, JSON.stringify(data));
   } catch {
     data = load();
@@ -48,6 +57,10 @@ function persist() {
       "Não foi possível salvar. Exporte seus dados e libere espaço.",
     );
   }
+}
+function addRecord(record) {
+  data.entries.push(record);
+  persist();
 }
 function ownItems(type) {
   return data.entries
@@ -62,7 +75,14 @@ function latestMood(owner = "self") {
   );
 }
 function moodInfo(id) {
-  return MOODS.find((x) => x.id === id) || MOODS[2];
+  return (
+    MOODS.find((x) => x.id === id) ||
+    LEGACY_MOODS.find((x) => x.id === id) || {
+      id: "unknown",
+      name: "Humor registrado",
+      sticker: "./assets/stickers/cat-tranquilo.svg",
+    }
+  );
 }
 function initial(name) {
   return (
@@ -83,12 +103,13 @@ function announce() {
   $("#miniAvatar").textContent = initial(data.profile.self);
   $("#topAvatar").textContent = initial(data.profile.self);
   $("#modeBanner").innerHTML =
-    '<span><strong>Pr\u00e9via privada:</strong> estes registros ficam neste dispositivo. Para compartilhar em tempo real, ser\u00e1 necess\u00e1rio ativar duas contas na nuvem.</span><button class="text-link" data-nav="ajustes">Entender</button>';
+    '<span><strong>Seu perfil neste aparelho:</strong> o login está ativo; os registros ainda não são sincronizados entre vocês.</span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
 }
 function navigate(next) {
   if (
     ![
       "inicio",
+      "humor",
       "diario",
       "calendario",
       "desafios",
@@ -120,9 +141,6 @@ function sec(title, desc = "", action = "") {
 function empty(icon, title, desc, action = "") {
   return `<div class="empty-state ${action ? "" : "large-empty"}"><div class="empty-icon">${icon}</div><strong>${title}</strong><p>${desc}</p>${action}</div>`;
 }
-function moodChoices(selected = "", mini = false) {
-  return `<div class="mood-row ${mini ? "modal-moods" : ""}">${MOODS.map((m) => `<button type="button" data-pick-mood="${m.id}" class="mood-option ${selected === m.id ? "selected" : ""}" aria-pressed="${selected === m.id}"><span>${m.emoji}</span>${m.name}</button>`).join("")}</div>`;
-}
 function timeTip() {
   const index = Math.floor(
     (new Date(localDay() + "T12:00:00") - new Date("2026-01-01T12:00:00")) /
@@ -133,7 +151,25 @@ function timeTip() {
 function partnerStatus() {
   const mine = latestMood("self");
   const theirs = latestMood("partner");
-  return `<div class="couple-list"><div class="person-line"><span class="person-avatar">${safe(initial(data.profile.self))}</span><div><strong>${safe(data.profile.self)}</strong><small>${mine ? displayDate(mine.date, { day: "2-digit", month: "short" }) : "Ainda sem registro"}</small></div><div class="person-right">${mine ? moodInfo(mine.mood).emoji : "\u{1F90D}"}</div></div><div class="mini-divider"></div><div class="person-line"><span class="person-avatar partner">${safe(initial(data.profile.partner))}</span><div><strong>${safe(data.profile.partner)}</strong><small>${theirs ? displayDate(theirs.date, { day: "2-digit", month: "short" }) : "Esperando conex\u00e3o entre contas"}</small></div><div class="person-right">${theirs ? moodInfo(theirs.mood).emoji : "\u{1F90D}"}</div></div></div>`;
+  const mineGraphic = mine
+    ? moodPortrait(
+        moodInfo(mine.mood),
+        "cat-mood-avatar",
+        moodInfo(mine.mood).name,
+      )
+    : "\u{1F90D}";
+  const theirGraphic = theirs
+    ? moodPortrait(
+        moodInfo(theirs.mood),
+        "cat-mood-avatar",
+        moodInfo(theirs.mood).name,
+      )
+    : "\u{1F90D}";
+  return `<div class="couple-list">
+    <div class="person-line"><span class="person-avatar">${safe(initial(data.profile.self))}</span><div><strong>${safe(data.profile.self)}</strong><small>${mine ? displayDate(mine.date, { day: "2-digit", month: "short" }) : "Ainda sem registro"}</small></div><div class="person-right">${mineGraphic}</div></div>
+    <div class="mini-divider"></div>
+    <div class="person-line"><span class="person-avatar partner">${safe(initial(data.profile.partner))}</span><div><strong>${safe(data.profile.partner)}</strong><small>${theirs ? displayDate(theirs.date, { day: "2-digit", month: "short" }) : "Esperando conexão entre contas"}</small></div><div class="person-right">${theirGraphic}</div></div>
+  </div>`;
 }
 function daysTogether() {
   if (!data.profile.anniversary) return null;
@@ -147,7 +183,7 @@ function formatEntry(e, showPhoto = true) {
   const title =
     e.title || (mood ? "Me senti " + mood.name.toLowerCase() : t.label);
   const note = e.note || e.description || "";
-  return `<article class="timeline-item"><span class="timeline-emoji" aria-hidden="true">${mood ? mood.emoji : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto adicionada por voc\u00ea" data-photo="${safe(e.photoId)}">` : ""}</div><div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div></article>`;
+  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto adicionada por voc\u00ea" data-photo="${safe(e.photoId)}">` : ""}</div><div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div></article>`;
 }
 function validUrl(url) {
   try {
@@ -189,7 +225,7 @@ function renderHome() {
   <section class="paper-card">${sec("Pr\u00f3ximos momentos", "Um encontro, uma chamada ou um compromisso especial.", '<button class="text-link" data-nav="calendario">Abrir agenda \u2192</button>')}${nextEvent ? `<div class="soft-highlight row-between"><div><span class="eyebrow">EST\u00c1 CHEGANDO</span><h3 style="margin:0 0 7px;font-size:17px">${safe(nextEvent.title)}</h3><span class="small muted">${displayDate(nextEvent.date, { weekday: "long", day: "numeric", month: "long" })}</span></div><span class="app-icon">\u{1F48C}</span></div>` : empty("\u{1F4C6}", "Planejem um momento a dois", "Marquem uma chamada, um jantar virtual ou o pr\u00f3ximo encontro.", '<button class="btn btn-soft" data-open="event">Adicionar um momento</button>')}</section>
  </div><div class="stack">
   <section class="paper-card">${sec("Como estamos hoje", "Um check-in sem cobran\u00e7as.")}${partnerStatus()}<div style="margin-top:17px"><button class="btn btn-soft" data-open="mood">Registrar meu humor \u2192</button></div></section>
-  <section class="paper-card">${sec("E voc\u00ea, como se sente?", "Um minuto para olhar para dentro.")}${moodChoices("")}<p class="mood-note">N\u00e3o existe sentimento errado. Escolha o que combina com o agora.</p></section>
+  <section class="paper-card">${sec("E voc\u00ea, como se sente?", "Escolha seu gatinho do dia.", '<button class="text-link" data-nav="humor">Ver todos →</button>')}${moodChoices("", "preview")}<p class="mood-note">N\u00e3o existe sentimento errado. Escolha a figurinha que combina com o agora.</p></section>
   <section class="paper-card daily-tip"><span class="tip-badge">\u2727 UM CARINHO POR DIA</span><p class="tip-text">\u201c${safe(timeTip())}\u201d</p><span class="tip-foot">Uma ideia simples para se conectar hoje.</span><div style="margin-top:13px"><button class="btn btn-small btn-white" type="button" data-surprise>Conselho surpresa (API)</button><p class="small muted" id="externalTip" aria-live="polite" style="margin:10px 0 0"></p></div></section>
   <section class="paper-card">${sec("Nossas mem\u00f3rias", "Fotografias que aquecem a saudade.", `<button class="text-link" data-nav="memorias">Ver fotos \u2192</button>`)}${
     media.length
@@ -208,6 +244,42 @@ function renderHome() {
         )
   }</section>
  </div></div>`;
+}
+function renderMoodScreen() {
+  const latest = latestMood("self");
+  const latestInfo = latest ? moodInfo(latest.mood) : null;
+  const current = MOODS.find((m) => m.id === moodChoice);
+  return `${intro("NOSSO HUMOR DO DIA", "Como está seu coração hoje?", "Escolha a figurinha de gatinho que mais combina com você agora. Você pode contar um pouquinho sobre o seu dia, se quiser.")}
+  <section class="cat-mood-page" aria-label="Registro de humor">
+    <div class="cat-mood-top">
+      <div><span class="eyebrow">PEQUENOS SENTIMENTOS, GRANDES HISTÓRIAS</span><h2>Um gatinho para cada sentimento.</h2><p>Todo humor merece acolhimento. Escolha sem pressa e registre apenas aquilo que quiser compartilhar.</p></div>
+      <span class="cat-mood-top-note">♡ Um carinho por dia</span>
+    </div>
+    <div class="cat-mood-layout">
+      <div class="cat-mood-main"><p class="cat-mood-subheading">ESCOLHA SUA FIGURINHA</p>${moodChoices(moodChoice, "full")}</div>
+      <aside class="cat-mood-side">
+        <form id="moodInlineForm" class="cat-mood-capture">
+          <span class="eyebrow">SEU REGISTRO</span>
+          <h3>Guardar esse momento ♡</h3>
+          <p id="moodChosen" aria-live="polite">${current ? current.name + ": " + current.phrase : "Primeiro, escolha um gatinho que combine com você."}</p>
+          <label for="moodNote">Quer contar mais? <span class="muted">(opcional)</span></label>
+          <textarea id="moodNote" name="note" rows="3" maxlength="1500" placeholder="O que fez você se sentir assim?"></textarea>
+          <label for="moodDate">Dia do registro</label>
+          <input type="date" id="moodDate" name="date" value="${localDay()}" required>
+          <label class="cat-mood-toggle" for="moodShared">
+            <input type="checkbox" id="moodShared" name="shared">
+            Compartilhar com meu amor quando a sincronização estiver ativa
+          </label>
+          <button type="submit" class="cat-mood-save" id="inlineSaveMood" ${current ? "" : "disabled"}>Salvar meu humor ♡</button>
+          <p id="moodInlineFeedback" class="cat-mood-feedback" role="status" aria-live="polite"></p>
+          <div class="cat-mood-latest">
+            <div class="cat-mood-latest-header">SEU ÚLTIMO REGISTRO DE HOJE</div>
+            ${latestInfo ? `<div class="cat-mood-last-row">${moodPortrait(latestInfo)}<div><strong>${safe(latestInfo.name)}</strong><small>${displayDate(latest.date, { day: "2-digit", month: "long" })}</small></div></div>` : "<p>Ainda não há registro de humor hoje. Seu primeiro gatinho está esperando!</p>"}
+          </div>
+        </form>
+      </aside>
+    </div>
+  </section>`;
 }
 function renderJournal() {
   const tags = [
@@ -274,7 +346,7 @@ function renderCalendar() {
   }
   const chosen = calendarItems(selectedDay);
   return `${intro("TEMPO COMPARTILHADO", "Nosso calend\u00e1rio", "Organizem encontros, chamadas e compromissos. Nesta prévia, os registros ficam neste navegador.", '<button class="btn btn-primary" data-open="event">+ Adicionar evento</button>')}
- <div class="calendar-shell"><section class="paper-card"><div class="calendar-top"><h3>${first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3><div><button data-today>Hoje</button> <button data-calendar="prev" aria-label="M\u00eas anterior">\u2190</button> <button data-calendar="next" aria-label="Pr\u00f3ximo m\u00eas">\u2192</button></div></div><div class="cal-grid">${["Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b", "Dom"].map((x) => `<span class="cal-label">${x}</span>`).join("")}${cells.join("")}</div><p class="mood-note">Os pontinhos mostram registros feitos em cada dia.</p></section><div class="stack"><section class="paper-card"><span class="eyebrow">O DIA ESCOLHIDO</span><h3 class="cal-side-date">${displayDate(selectedDay, { weekday: "long", day: "numeric", month: "long" })}</h3>${chosen.length ? `<div class="timeline-list">${chosen.map((e) => formatEntry(e, false)).join("")}</div>` : empty("\u2727", "Um dia para escrever", "Esse dia ainda n\u00e3o tem lembran\u00e7as.", '<button class="btn btn-soft" data-open="event">Adicionar ao dia</button>')}</section><div class="notice">A integra\u00e7\u00e3o com o Google Agenda precisar\u00e1 de autoriza\u00e7\u00e3o separada de cada pessoa. Por enquanto, o calend\u00e1rio funciona com eventos adicionados aqui.</div></div></div>`;
+ <div class="calendar-shell"><section class="paper-card"><div class="calendar-top"><h3>${first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3><div><button data-today>Hoje</button> <button data-calendar="prev" aria-label="M\u00eas anterior">\u2190</button> <button data-calendar="next" aria-label="Pr\u00f3ximo m\u00eas">\u2192</button></div></div><div class="cal-grid">${["Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b", "Dom"].map((x) => `<span class="cal-label">${x}</span>`).join("")}${cells.join("")}</div><p class="mood-note">Os pontinhos mostram registros feitos em cada dia.</p></section><div class="stack"><section class="paper-card"><span class="eyebrow">O DIA ESCOLHIDO</span><h3 class="cal-side-date">${displayDate(selectedDay, { weekday: "long", day: "numeric", month: "long" })}</h3>${chosen.length ? `<div class="timeline-list">${chosen.map((e) => formatEntry(e, false)).join("")}</div>` : empty("\u2727", "Um dia para escrever", "Esse dia ainda n\u00e3o tem lembran\u00e7as.", '<button class="btn btn-soft" data-open="event">Adicionar ao dia</button>')}</section><div class="notice">Importe eventos escolhidos em Meu cantinho → Suas conexões. As cópias importadas não acompanham alterações posteriores no Google Agenda.</div></div></div>`;
 }
 function challengeCard(e) {
   const proofs = ownItems("proof").filter((p) => p.challengeId === e.id),
@@ -298,27 +370,24 @@ function renderMemories() {
         e.date.slice(0, 4) !== localDay().slice(0, 4),
     );
   return `${intro("FOTOS QUE ABRA\u00c7AM", "Nossas mem\u00f3rias", "Das fotografias mais antigas aos registros de hoje, todas t\u00eam um lugar especial.", '<button class="btn btn-primary" data-open="memory">+ Guardar uma foto</button>')}
- <div class="stack"><div class="notice">Google Fotos: por seguran\u00e7a, a API oficial s\u00f3 permite importar imagens que cada pessoa escolher. Nesta vers\u00e3o voc\u00ea pode selecionar fotos do celular ou do computador. A conex\u00e3o direta via Google Photos Picker ser\u00e1 uma etapa posterior.</div>
+ <div class="stack"><div class="notice">Google Fotos: por seguran\u00e7a, a API oficial s\u00f3 permite importar imagens que cada pessoa escolher. Selecione fotos do aparelho ou abra Meu cantinho → Suas conexões para importar fotos escolhidas no Google.</div>
  ${thisDay.length ? `<section class="paper-card">${sec("Neste dia, em outros anos", "Pequenos reencontros com o passado.")}<div class="photo-grid">${thisDay.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="Foto de ${safe(e.date)}"></div>`).join("")}</div></section>` : ""}
  <section class="paper-card">${sec("Nosso \u00e1lbum", `${photos.length} fotografia(s) guardada(s).`)}${photos.length ? `<div class="photo-grid">${photos.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="${safe(e.title || "Nossa mem\u00f3ria")}"><div class="photo-caption"><strong>${safe(e.title || "Nosso momento")}</strong><br>${displayDate(e.date, { day: "2-digit", month: "short", year: "numeric" })}</div><button class="photo-delete" data-delete="${safe(e.id)}" aria-label="Excluir foto">\u00d7</button></div>`).join("")}</div>` : empty("\u{1F4F7}", "O \u00e1lbum espera por voc\u00eas", "Que tal uma foto do primeiro encontro ou de um momento inesquec\u00edvel?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}</section></div>`;
 }
 function renderMusic() {
   const tracks = ownItems("music");
   return `${intro("PLAYLIST DO CORA\u00c7\u00c3O", "Nossa trilha sonora", "As m\u00fasicas que lembram os dois, que marcaram momentos ou que voc\u00eas querem ouvir juntos.", '<button class="btn btn-primary" data-open="music">+ Adicionar m\u00fasica</button>')}
- <div class="two-col"><section class="paper-card">${sec("M\u00fasicas especiais", "Guarde um link do Spotify, YouTube ou outro servi\u00e7o.")}${tracks.length ? `<div class="music-list">${tracks.map((e) => `<div class="music-card"><span class="music-cover">\u266b</span><div style="min-width:0"><strong>${safe(e.title)}</strong><small>${safe(e.artist || "Escolhida com carinho")}</small></div>${e.url ? `<a class="music-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir \u2197</a>` : ""}<button class="mini-action" data-delete="${safe(e.id)}" aria-label="Apagar m\u00fasica">\u00d7</button></div>`).join("")}</div>` : empty("\u266b", "A trilha sonora come\u00e7a aqui", "Toda hist\u00f3ria tem uma m\u00fasica especial. Qual \u00e9 a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma m\u00fasica</button>')}</section><div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">\u266b UMA IDEIA PARA OS DOIS</span><p class="tip-text">\u201cUma m\u00fasica pode ser a forma mais bonita de dizer: lembrei de voc\u00ea.\u201d</p></section><div class="notice">A integra\u00e7\u00e3o com o Spotify (favoritas, tocando agora e recentes) depende do consentimento de cada conta e de um aplicativo autorizado no Spotify for Developers. Nenhum hist\u00f3rico \u00e9 coletado nesta pr\u00e9via.</div></div></div>`;
+ <div class="two-col"><section class="paper-card">${sec("M\u00fasicas especiais", "Guarde um link do Spotify, YouTube ou outro servi\u00e7o.")}${tracks.length ? `<div class="music-list">${tracks.map((e) => `<div class="music-card"><span class="music-cover">\u266b</span><div style="min-width:0"><strong>${safe(e.title)}</strong><small>${safe(e.artist || "Escolhida com carinho")}</small></div>${e.url ? `<a class="music-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir \u2197</a>` : ""}<button class="mini-action" data-delete="${safe(e.id)}" aria-label="Apagar m\u00fasica">\u00d7</button></div>`).join("")}</div>` : empty("\u266b", "A trilha sonora come\u00e7a aqui", "Toda hist\u00f3ria tem uma m\u00fasica especial. Qual \u00e9 a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma m\u00fasica</button>')}</section><div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">\u266b UMA IDEIA PARA OS DOIS</span><p class="tip-text">\u201cUma m\u00fasica pode ser a forma mais bonita de dizer: lembrei de voc\u00ea.\u201d</p></section><div class="notice">Conecte sua conta em Meu cantinho → Suas conexões para escolher favoritas ou músicas recentes. Nenhuma música é guardada automaticamente.</div></div></div>`;
 }
 function renderSettings() {
-  return `${intro("UM ESPA\u00c7O S\u00d3 DE VOC\u00caS", "Meu cantinho", "Personalize o aplicativo e escolha conscientemente o que deseja compartilhar.", "")}
- <div class="settings-grid"><section class="paper-card"><div class="section-heading"><h2>Os dois protagonistas</h2></div><form id="profileForm"><div class="field"><label for="profileSelf">Como voc\u00ea quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" value="${safe(data.profile.self)}" required></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" value="${safe(data.profile.partner)}" required></div><div class="field"><label for="profileDate">Quando a hist\u00f3ria de voc\u00eas come\u00e7ou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"><p class="form-hint">Usada somente para calcular o contador de dias.</p></div><button class="btn btn-primary" type="submit">Salvar nomes e data</button></form></section>
- <section class="paper-card">${sec("Privacidade e conex\u00f5es", "Seu espa\u00e7o, suas escolhas.")}<div class="setting-status"><strong>Modo local ativo.</strong><br>Os dados desta pr\u00e9via ficam neste navegador e n\u00e3o s\u00e3o enviados automaticamente \u00e0 sua namorada.</div><p class="setting-note">Para sincronizar a rotina em dois celulares, \u00e9 necess\u00e1rio configurar um projeto privado de banco de dados, criar duas contas autenticadas e testar as permiss\u00f5es de cada registro.</p><p class="setting-note">Google Fotos, Google Agenda e Spotify n\u00e3o est\u00e3o conectados. A autoriza\u00e7\u00e3o dever\u00e1 ser concedida separadamente por cada um, com op\u00e7\u00e3o de desconectar.</p><span class="tag neutral">Nenhuma conta externa conectada</span></section>
- <section class="paper-card">${sec("Seus registros", "Exporte antes de mudar de celular.")}<p class="setting-note">O backup em JSON inclui as imagens salvas localmente. Guarde o arquivo em um lugar privado: ele pode conter registros pessoais.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput" tabindex="0">Importar backup<input id="backupInput" type="file" accept="application/json,.json" style="display:none"></label></div><div class="divider"></div><p class="setting-note">Excluir os dados deste navegador n\u00e3o apaga eventuais c\u00f3pias externas que voc\u00ea mesmo exportou.</p><button class="btn btn-quiet" data-clear>Apagar os dados locais</button></section>
- <section class="paper-card">${sec("Pr\u00f3ximas conex\u00f5es", "Integra\u00e7\u00f5es opcionais, sem acesso autom\u00e1tico.")}
- <div class="type-col"><div class="row-between"><div><strong class="small">Google Fotos</strong><p class="form-hint">Importar fotos selecionadas, inclusive antigas.</p></div><span class="tag neutral">Em prepara\u00e7\u00e3o</span></div><div class="divider"></div><div class="row-between"><div><strong class="small">Google Agenda</strong><p class="form-hint">Disponibilidade e eventos escolhidos.</p></div><span class="tag neutral">Em prepara\u00e7\u00e3o</span></div><div class="divider"></div><div class="row-between"><div><strong class="small">Spotify</strong><p class="form-hint">M\u00fasicas favoritas e recentes, com permiss\u00e3o.</p></div><span class="tag neutral">Em prepara\u00e7\u00e3o</span></div></div></section></div>`;
+  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Seu perfil", "Cada pessoa entra com sua própria conta.")}<p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm"><div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div><button class="btn btn-primary">Salvar perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "Guarde uma cópia antes de trocar de aparelho.")}<p class="setting-note">O backup inclui suas fotos e anotações deste perfil. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Seus registros anteriores à criação do login foram preservados neste navegador. Eles não são atribuídos automaticamente a uma conta.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar os dados locais deste perfil</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você escolher. Fotos, eventos e músicas importados começam como privados.</p><p class="setting-note">Os registros ficam neste navegador, separados por perfil, e ainda não são sincronizados com outro aparelho. O login não criptografa o armazenamento local: use seu próprio dispositivo.</p><p class="setting-note">Desconectar uma conta não apaga as cópias que você já guardou aqui.</p></section></div>`;
 }
+
 function render() {
   announce();
   const routes = {
     inicio: renderHome,
+    humor: renderMoodScreen,
     diario: renderJournal,
     calendario: renderCalendar,
     desafios: renderChallenges,
@@ -348,13 +417,13 @@ const shareField = (checked = true) =>
 function openModal(type, meta) {
   dialogType = type;
   dialogMeta = meta || null;
-  moodChoice = "feliz";
+  moodChoice = "";
   let title = "",
     fields = "";
   switch (type) {
     case "mood":
       title = "Como est\u00e1 seu cora\u00e7\u00e3o?";
-      fields = `<p class="setting-note">Escolha o que est\u00e1 sentindo. O registro pode ficar s\u00f3 para voc\u00ea.</p>${moodChoices(moodChoice, true)}${noteField("O que fez voc\u00ea se sentir assim?")}${dateField()}${shareField(false)}`;
+      fields = `<p class="setting-note">Escolha o que est\u00e1 sentindo. O registro pode ficar s\u00f3 para voc\u00ea.</p>${moodChoices(moodChoice, "modal")}${noteField("O que fez voc\u00ea se sentir assim?")}${dateField()}${shareField(false)}`;
       break;
     case "meal":
       title = "O que voc\u00ea comeu?";
@@ -483,6 +552,8 @@ async function saveModal(e) {
       shared: form.has("shared"),
     };
     if (type === "mood") {
+      if (!MOODS.some((m) => m.id === moodChoice))
+        throw new Error("Escolha uma figurinha antes de salvar.");
       record.mood = moodChoice;
       record.title = "";
     }
@@ -528,8 +599,7 @@ async function saveModal(e) {
     }
     if (!record.title && !["mood", "proof"].includes(type))
       throw new Error("Preencha o t\u00edtulo do registro.");
-    data.entries.push(record);
-    persist();
+    addRecord(record);
     $("#entryDialog").close();
     render();
     toast("Seu registro foi guardado com carinho \u2661");
@@ -540,6 +610,42 @@ async function saveModal(e) {
     b.disabled = false;
   }
 }
+function saveInlineMood(e) {
+  e.preventDefault();
+  const feedback = $("#moodInlineFeedback");
+  const button = $("#inlineSaveMood");
+  if (!MOODS.some((m) => m.id === moodChoice)) {
+    feedback.textContent = "Escolha uma figurinha antes de salvar.";
+    return;
+  }
+  if (!e.target.reportValidity()) return;
+  button.disabled = true;
+  feedback.textContent = "";
+  try {
+    const form = new FormData(e.target);
+    const rawDate = String(form.get("date") || localDay());
+    const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : localDay();
+    addRecord({
+      id: uid(),
+      type: "mood",
+      owner: "self",
+      created: new Date().toISOString(),
+      date,
+      title: "",
+      mood: moodChoice,
+      note: String(form.get("note") || "")
+        .trim()
+        .slice(0, 1500),
+      shared: form.has("shared"),
+    });
+    moodChoice = "";
+    render();
+    toast("Seu humor foi salvo com carinho ♡");
+  } catch (err) {
+    feedback.textContent = err?.message || "Não foi possível salvar o humor.";
+    button.disabled = false;
+  }
+}
 function selectMood(id) {
   if (!MOODS.some((m) => m.id === id)) return;
   moodChoice = id;
@@ -547,6 +653,13 @@ function selectMood(id) {
     b.classList.toggle("selected", b.dataset.pickMood === id);
     b.setAttribute("aria-pressed", String(b.dataset.pickMood === id));
   });
+  const save = document.querySelector("#inlineSaveMood");
+  if (save) save.disabled = false;
+  const chosen = document.querySelector("#moodChosen");
+  const info = MOODS.find((m) => m.id === id);
+  if (chosen && info) chosen.textContent = info.name + ": " + info.phrase;
+  const feedback = document.querySelector("#moodInlineFeedback");
+  if (feedback) feedback.textContent = "";
 }
 async function addPreset(index) {
   const p = PRESETS[index];
@@ -720,9 +833,9 @@ window.addEventListener("click", async (e) => {
   const mood = e.target.closest("[data-pick-mood]");
   if (mood) {
     const id = mood.dataset.pickMood;
-    if ($("#entryDialog").open) selectMood(id);
+    if ($("#entryDialog").open || tab === "humor") selectMood(id);
     else {
-      openModal("mood");
+      navigate("humor");
       selectMood(id);
     }
     return;
@@ -804,6 +917,7 @@ window.addEventListener("click", async (e) => {
 });
 document.addEventListener("submit", (e) => {
   if (e.target.id === "entryForm") saveModal(e);
+  if (e.target.id === "moodInlineForm") saveInlineMood(e);
   if (e.target.id === "profileForm") {
     e.preventDefault();
     const form = new FormData(e.target);
@@ -832,6 +946,7 @@ if (location.hash) {
   if (
     [
       "inicio",
+      "humor",
       "diario",
       "calendario",
       "desafios",
@@ -846,9 +961,82 @@ window.addEventListener("hashchange", () => {
   const next = location.hash.slice(1) || "inicio";
   if (next !== tab) navigate(next);
 });
-navigate(tab);
 if (
   ("serviceWorker" in navigator && location.protocol === "https:") ||
   ("serviceWorker" in navigator && location.hostname === "localhost")
 )
   navigator.serviceWorker.register("./sw.js").catch(() => {});
+
+export function startApp(user) {
+  if (!user?.id) throw new Error("Entre para continuar.");
+  accountUser = user;
+  STORE = "entre-nos-user-v1:" + user.id;
+  setMediaUser(user.id);
+  data = load();
+  initConnections(user, {
+    refresh: render,
+    toast,
+    importRecords: async (records, { blob } = {}) => {
+      let count = 0;
+      for (const input of records) {
+        if (!["event", "music", "memory"].includes(input.type)) continue;
+        if (
+          data.entries.some(
+            (x) =>
+              x.source === input.source && x.externalId === input.externalId,
+          )
+        )
+          continue;
+        const record = {
+          ...input,
+          id: uid(),
+          owner: "self",
+          created: new Date().toISOString(),
+          shared: false,
+        };
+        if (blob) {
+          record.photoId = uid();
+          await mediaPut(record.photoId, await compress(blob));
+        }
+        try {
+          data.entries.push(record);
+          persist();
+          count++;
+        } catch (error) {
+          if (record.photoId) await mediaDelete(record.photoId);
+          throw error;
+        }
+      }
+      render();
+      return count;
+    },
+  });
+  document.addEventListener("click", async (event) => {
+    if (event.target.closest("[data-logout]")) {
+      try {
+        await logout();
+      } catch (error) {
+        toast(error.message);
+      }
+    }
+    if (event.target.closest("[data-legacy-export]")) {
+      const oldStore = STORE,
+        oldData = data;
+      try {
+        STORE = "entre-nos-local-v1";
+        data = load();
+        if (!data.entries.length) {
+          toast("Não há registros anteriores neste navegador.");
+          return;
+        }
+        setMediaUser(null);
+        await exportBackup();
+      } finally {
+        STORE = oldStore;
+        data = oldData;
+        setMediaUser(user.id);
+      }
+    }
+  });
+  navigate(tab);
+}

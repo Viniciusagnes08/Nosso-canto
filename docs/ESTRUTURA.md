@@ -1,3 +1,13 @@
+# Estrutura atual — versão 0.3
+
+A revisão atual acrescenta `assets/boot.js` (login e início autenticado), `assets/auth.js` (sessão Supabase), `assets/connections.js` (seleção OAuth), `assets/integration-models.js` (mapeamento/validação), `api/photo.js` (download autenticado), `scripts/build.mjs` (bundle/configuração pública), e os módulos/figurinhas de humor da branch mais recente.
+
+Consulte [CONEXOES.md](CONEXOES.md) para ativação e [REVISAO.md](REVISAO.md) para resultados e limites. O service worker antigo foi aposentado; autenticação exige rede. Os namespaces locais agora são por usuário; a base v1 anterior é preservada, sem atribuição automática.
+
+---
+
+O texto abaixo registra a revisão 0.2 e deve ser lido como histórico.
+
 # Estrutura e evolução do Nosso Canto
 
 ## Versão 0.2 — organização e experiência local

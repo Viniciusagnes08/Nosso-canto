@@ -28,6 +28,16 @@ function getNode(selector) {
 }
 const local = {};
 const context = {
+  connectionCards() {
+    return "<section>Connections</section>";
+  },
+  initConnections() {},
+  logout() {},
+  sessionStorage: {
+    getItem() {
+      return null;
+    },
+  },
   console,
   Date,
   URL,
@@ -71,18 +81,30 @@ const context = {
 };
 context.window = context;
 vm.createContext(context);
-for (const file of ["catalog.js", "utils.js", "media.js", "app.js"]) {
+for (const file of [
+  "catalog.js",
+  "utils.js",
+  "media.js",
+  "mood-view.js",
+  "app.js",
+]) {
   const source = fs
     .readFileSync(__dirname + "/assets/" + file, "utf8")
     .replace(/^import[\s\S]*?from\s+[\"'][^\"']+[\"'];/gm, "")
-    .replace(/^export\s*\{[^}]*\};/gm, "");
+    .replace(/^export\s*\{[^}]*\};/gm, "")
+    .replace(/export function/g, "function");
   vm.runInContext(source, context, { filename: file });
 }
+vm.runInContext(
+  "startApp({id:'test-user',email:'test@example.invalid'})",
+  context,
+);
 assert(
   getNode("#app").innerHTML.includes("Perto, mesmo"),
   "home hero rendered",
 );
 for (const route of [
+  "humor",
   "diario",
   "calendario",
   "desafios",
@@ -103,16 +125,136 @@ assert(
   "mood visible in home",
 );
 assert(
-  JSON.parse(local["entre-nos-local-v1"]).entries.length === 1,
+  JSON.parse(local["entre-nos-user-v1:test-user"]).entries.length === 1,
   "record persisted",
 );
 vm.runInContext("addPreset(0)", context);
 assert(
-  JSON.parse(local["entre-nos-local-v1"]).entries.length === 2,
+  JSON.parse(local["entre-nos-user-v1:test-user"]).entries.length === 2,
   "challenge persisted",
 );
 console.log(
-  "OK: seven routes, state write, mood rendering and challenge creation",
+  "OK: eight routes, state write, mood rendering and challenge creation",
+);
+
+// Sticker and local persistence regression tests.
+assert.equal(
+  vm.runInContext("MOODS.length", context),
+  8,
+  "eight moods in catalog",
+);
+assert.equal(
+  vm.runInContext("new Set(MOODS.map(m=>m.id)).size", context),
+  8,
+  "unique mood IDs",
+);
+vm.runInContext("navigate('humor')", context);
+const moodPage = getNode("#app").innerHTML;
+assert(moodPage.includes('id="moodInlineForm"'), "dedicated mood form exists");
+assert(
+  moodPage.includes("cat-apaixonado.svg") &&
+    moodPage.includes("cat-tranquilo.svg"),
+  "real cat artwork in mood page",
+);
+assert.equal(
+  (moodPage.match(/data-pick-mood=/g) || []).length,
+  8,
+  "eight sticker buttons",
+);
+assert(
+  moodPage.includes('id="inlineSaveMood" disabled'),
+  "save locked until selection",
+);
+vm.runInContext("selectMood('carente')", context);
+assert.equal(vm.runInContext("moodChoice", context), "carente");
+assert.equal(
+  getNode("#inlineSaveMood").disabled,
+  false,
+  "selection enables save",
+);
+vm.runInContext("openModal('mood')", context);
+assert(
+  getNode("#formFields").innerHTML.includes("cat-saudade.svg"),
+  "modal uses sticker artwork",
+);
+vm.runInContext("selectMood('saudade')", context);
+assert.equal(vm.runInContext("moodChoice", context), "saudade");
+assert.equal(
+  vm.runInContext("moodInfo('triste').name", context),
+  "Tristinha",
+  "historical mood preserved",
+);
+assert.equal(
+  vm.runInContext("moodInfo('normal').name", context),
+  "Normal",
+  "historical neutral mood preserved",
+);
+vm.runInContext(
+  "addRecord({id:'cat-mood-test', type:'mood', owner:'self', date:localDay(),created:new Date().toISOString(),mood:'saudade',note:'um registro',shared:false})",
+  context,
+);
+assert(
+  JSON.parse(local["entre-nos-user-v1:test-user"]).entries.some(
+    (e) => e.id === "cat-mood-test" && e.mood === "saudade",
+  ),
+  "sticker mood uses canonical local records",
+);
+// Exercise the actual inline submit handler (not merely the storage helper).
+const nativeFormData = context.FormData;
+context.FormData = class MockFormData {
+  constructor(form) {
+    this.values = new Map(form.values || []);
+  }
+  get(name) {
+    return this.values.get(name) ?? null;
+  }
+  has(name) {
+    return this.values.has(name);
+  }
+};
+vm.runInContext(
+  "document.querySelector('#entryDialog').close(); navigate('humor');selectMood('ansioso')",
+  context,
+);
+vm.runInContext(
+  "saveInlineMood({preventDefault(){}, target:{reportValidity(){return true},values:[['date',localDay()],['note','Estou com o coração acelerado']]}})",
+  context,
+);
+const savedMoods = JSON.parse(
+  local["entre-nos-user-v1:test-user"],
+).entries.filter((e) => e.type === "mood");
+assert(
+  savedMoods.some(
+    (e) =>
+      e.mood === "ansioso" &&
+      e.note === "Estou com o coração acelerado" &&
+      e.shared === false,
+  ),
+  "inline mood form persists private journal entry",
+);
+context.FormData = nativeFormData;
+const illustrations = [
+  "apaixonado",
+  "saudade",
+  "feliz",
+  "carente",
+  "cansado",
+  "bravo",
+  "ansioso",
+  "tranquilo",
+];
+for (const id of illustrations) {
+  const svg = fs.readFileSync(
+    __dirname + "/assets/stickers/cat-" + id + ".svg",
+    "utf8",
+  );
+  assert(
+    svg.startsWith("<svg ") && svg.includes("</svg>"),
+    "artwork " + id + " is a valid SVG document structure",
+  );
+}
+console.log(
+  "OK: eight SVG kitten moods, page/modal, selection and legacy compatibility",
 );
 
 assert.equal(vm.runInContext("validUrl('javascript:alert(1)')", context), "#");
@@ -124,6 +266,31 @@ assert.equal(
   vm.runInContext("latestMood('partner')", context),
   undefined,
   "old mood is not presented as today",
+);
+local["entre-nos-local-v1"] = JSON.stringify({
+  profile: { self: "Legacy" },
+  entries: [{ id: "legacy" }],
+});
+vm.runInContext("startApp({id:'second-user'})", context);
+assert.equal(
+  vm.runInContext("data.entries.length", context),
+  0,
+  "second login does not inherit first or legacy records",
+);
+assert.equal(
+  vm.runInContext("mediaDatabase", context),
+  "entre-nos-images:second-user",
+  "photos use a per-user database",
+);
+vm.runInContext("startApp({id:'test-user'})", context);
+assert(
+  vm.runInContext("data.entries.some(e=>e.id==='cat-mood-test')", context),
+  "first profile retains its records",
+);
+assert.equal(
+  JSON.parse(local["entre-nos-local-v1"]).entries[0].id,
+  "legacy",
+  "legacy storage untouched",
 );
 context.localStorage.setItem = () => {
   throw new Error("QuotaExceededError");

@@ -1,9 +1,75 @@
 const MOODS = [
-  { id: "radiante", name: "Radiante", emoji: "\u{1F970}" },
-  { id: "feliz", name: "Feliz", emoji: "\u{1F60A}" },
-  { id: "normal", name: "Normal", emoji: "\u{1F610}" },
-  { id: "triste", name: "Tristinha", emoji: "\u{1F614}" },
-  { id: "dificil", name: "Dia dif\u00edcil", emoji: "\u{1F625}" },
+  {
+    id: "apaixonado",
+    name: "Apaixonado",
+    phrase: "Hoje eu tô todo seu.",
+    sticker: "./assets/stickers/cat-apaixonado.svg",
+  },
+  {
+    id: "saudade",
+    name: "Com saudade",
+    phrase: "Queria você aqui comigo.",
+    sticker: "./assets/stickers/cat-saudade.svg",
+  },
+  {
+    id: "feliz",
+    name: "Feliz",
+    phrase: "Meu coração tá levinho hoje.",
+    sticker: "./assets/stickers/cat-feliz.svg",
+  },
+  {
+    id: "carente",
+    name: "Carente",
+    phrase: "Tô precisando de carinho.",
+    sticker: "./assets/stickers/cat-carente.svg",
+  },
+  {
+    id: "cansado",
+    name: "Cansado",
+    phrase: "Hoje eu só queria colo.",
+    sticker: "./assets/stickers/cat-cansado.svg",
+  },
+  {
+    id: "bravo",
+    name: "Bravo",
+    phrase: "Tô meio bravinho hoje.",
+    sticker: "./assets/stickers/cat-bravo.svg",
+  },
+  {
+    id: "ansioso",
+    name: "Ansioso",
+    phrase: "Meu coração tá acelerado.",
+    sticker: "./assets/stickers/cat-ansioso.svg",
+  },
+  {
+    id: "tranquilo",
+    name: "Tranquilo",
+    phrase: "Hoje eu tô em paz.",
+    sticker: "./assets/stickers/cat-tranquilo.svg",
+  },
+];
+// Historical records keep their original description; old feelings are never silently reclassified.
+const LEGACY_MOODS = [
+  {
+    id: "radiante",
+    name: "Radiante",
+    sticker: "./assets/stickers/cat-feliz.svg",
+  },
+  {
+    id: "normal",
+    name: "Normal",
+    sticker: "./assets/stickers/cat-tranquilo.svg",
+  },
+  {
+    id: "triste",
+    name: "Tristinha",
+    sticker: "./assets/stickers/cat-saudade.svg",
+  },
+  {
+    id: "dificil",
+    name: "Dia difícil",
+    sticker: "./assets/stickers/cat-cansado.svg",
+  },
 ];
 const TIPS = [
   "Escolham uma foto que represente o dia de hoje e contem um ao outro por qu\u00ea.",
@@ -62,4 +128,4 @@ const TYPES = {
   proof: { icon: "\u{1F4F8}", label: "Miss\u00e3o cumprida" },
 };
 
-export { MOODS, TIPS, PRESETS, TYPES };
+export { MOODS, LEGACY_MOODS, TIPS, PRESETS, TYPES };

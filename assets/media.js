@@ -1,9 +1,15 @@
 const imgCache = new Map();
+let mediaDatabase = "entre-nos-images";
+export function setMediaUser(userId) {
+  for (const url of imgCache.values()) URL.revokeObjectURL(url);
+  imgCache.clear();
+  mediaDatabase = userId ? "entre-nos-images:" + userId : "entre-nos-images";
+}
 function openDb() {
   return new Promise((resolve, reject) => {
     if (!("indexedDB" in window))
       return reject(new Error("IndexedDB indispon\u00edvel"));
-    const req = indexedDB.open("entre-nos-images", 1);
+    const req = indexedDB.open(mediaDatabase, 1);
     req.onupgradeneeded = () => {
       if (!req.result.objectStoreNames.contains("media"))
         req.result.createObjectStore("media");
