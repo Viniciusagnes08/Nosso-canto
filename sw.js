@@ -1,9 +1,12 @@
-const CACHE = "entre-nos-shell-v2";
+const CACHE = "entre-nos-shell-v3";
 const ASSETS = [
   "./",
   "./index.html",
   "./assets/styles.css",
   "./assets/layout.css",
+  "./assets/login.css",
+  "./assets/auth-config.js",
+  "./assets/auth.js",
   "./assets/app.js",
   "./assets/catalog.js",
   "./assets/utils.js",
