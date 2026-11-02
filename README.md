@@ -50,3 +50,7 @@ Before turning on cloud writes, implement signed-in profiles, secure invitation 
 One user cannot read another's private journal or photo library. Future cloud sharing must require both users to join voluntarily, grant specific permissions, and provide a way to revoke access. Avoid continuous routine surveillance, partner location tracking, or inferred moods.
 
 Source concept references: Pixy Mood Tracker (MIT), Mood Journal (MIT), Nightlio (AGPL-3.0), Our Days (MIT), TwoFrames (license file not verified). No upstream source code or assets are incorporated into this app. Ideas and functional patterns were researched; this preview is an independent implementation.
+
+## Structure revision (0.2)
+
+See [architecture and roadmap](docs/ESTRUTURA.md). Run `npm test` for regression checks. The application remains a local-only preview.

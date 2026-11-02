@@ -1,61 +1,154 @@
 <!doctype html>
 <html lang="pt-BR">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-  <meta name="theme-color" content="#fff9f4" />
-  <meta name="description" content="Um cantinho privado para dois coracoes que vivem a distancia." />
-  <link rel="manifest" href="./manifest.webmanifest" />
-  <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
-  <link rel="stylesheet" href="./assets/styles.css" />
-  <title>Entre N&oacute;s | Nosso cantinho</title>
-</head>
-<body>
-  <div class="app-shell">
-    <aside class="sidebar" aria-label="Navegacao principal">
-      <a class="brand" href="#inicio" data-nav="inicio" aria-label="Entre Nos: inicio">
-        <span class="brand-mark" aria-hidden="true">&#9829;</span>
-        <span class="brand-text"><strong>entre n&oacute;s<span class="brand-period">.</span></strong><small>um lugar s&oacute; nosso</small></span>
-      </a>
-      <div class="sidebar-section-title">NOSSO ESPA&Ccedil;O</div>
-      <nav class="nav-links" aria-label="Secoes">
-        <button class="nav-link active" data-nav="inicio"><span class="nav-icon" aria-hidden="true">&#8962;</span> In&iacute;cio</button>
-        <button class="nav-link" data-nav="diario"><span class="nav-icon" aria-hidden="true">&#9825;</span> Nosso dia</button>
-        <button class="nav-link" data-nav="calendario"><span class="nav-icon" aria-hidden="true">&#9638;</span> Calend&aacute;rio</button>
-        <button class="nav-link" data-nav="desafios"><span class="nav-icon" aria-hidden="true">&#10038;</span> Desafios</button>
-        <button class="nav-link" data-nav="memorias"><span class="nav-icon" aria-hidden="true">&#10047;</span> Mem&oacute;rias</button>
-        <button class="nav-link" data-nav="musicas"><span class="nav-icon" aria-hidden="true">&#9835;</span> Nossa trilha</button>
-      </nav>
-      <div class="sidebar-note"><span class="small-flower" aria-hidden="true">&#10047;</span><p>Mesmo longe, sempre pertinho de voc&ecirc;.</p><small>Com carinho, todos os dias.</small></div>
-      <button class="profile-link" data-nav="ajustes" aria-label="Abrir configuracoes"><span class="profile-avatar" id="miniAvatar">V</span><span><strong id="miniName">Voc&ecirc;</strong><small>Meu perfil e privacidade</small></span><span class="chevron" aria-hidden="true">&rsaquo;</span></button>
-    </aside>
-    <div class="page-frame">
-      <header class="topbar">
-        <a class="mobile-brand" href="#inicio" data-nav="inicio"><span class="heart-small">&#9829;</span> entre n&oacute;s<span class="brand-period">.</span></a>
-        <div class="topbar-date" id="topbarDate"></div>
-        <button class="topbar-profile" data-nav="ajustes"><span class="profile-avatar" id="topAvatar">V</span><span class="only-desktop">Meu cantinho</span></button>
-      </header>
-      <div id="modeBanner" class="mode-banner" role="status"></div>
-      <main id="app" tabindex="-1" aria-live="polite"></main>
-      <footer class="page-footer">Feito com <span aria-label="amor">&#9829;</span> para transformar saudade em presen&ccedil;a.</footer>
+  <head>
+    <meta charset="utf-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, viewport-fit=cover"
+    />
+    <meta name="theme-color" content="#fff9f4" />
+    <meta
+      name="description"
+      content="Um cantinho privado para dois coracoes que vivem a distancia."
+    />
+    <link rel="manifest" href="./manifest.webmanifest" />
+    <link rel="icon" href="./assets/icon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="./assets/styles.css" />
+    <link rel="stylesheet" href="./assets/layout.css" />
+    <title>Entre N&oacute;s | Nosso cantinho</title>
+  </head>
+  <body>
+    <a class="skip-link" href="#app">Pular para o conteúdo</a>
+    <div class="app-shell">
+      <aside class="sidebar" aria-label="Navegacao principal">
+        <a
+          class="brand"
+          href="#inicio"
+          data-nav="inicio"
+          aria-label="Entre Nos: inicio"
+        >
+          <span class="brand-mark" aria-hidden="true">&#9829;</span>
+          <span class="brand-text"
+            ><strong>entre n&oacute;s<span class="brand-period">.</span></strong
+            ><small>um lugar s&oacute; nosso</small></span
+          >
+        </a>
+        <div class="sidebar-section-title">NOSSO ESPA&Ccedil;O</div>
+        <nav class="nav-links" aria-label="Secoes">
+          <button class="nav-link active" data-nav="inicio">
+            <span class="nav-icon" aria-hidden="true">&#8962;</span>
+            In&iacute;cio
+          </button>
+          <button class="nav-link" data-nav="diario">
+            <span class="nav-icon" aria-hidden="true">&#9825;</span> Nosso dia
+          </button>
+          <button class="nav-link" data-nav="calendario">
+            <span class="nav-icon" aria-hidden="true">&#9638;</span>
+            Calend&aacute;rio
+          </button>
+          <button class="nav-link" data-nav="desafios">
+            <span class="nav-icon" aria-hidden="true">&#10038;</span> Desafios
+          </button>
+          <button class="nav-link" data-nav="memorias">
+            <span class="nav-icon" aria-hidden="true">&#10047;</span>
+            Mem&oacute;rias
+          </button>
+          <button class="nav-link" data-nav="musicas">
+            <span class="nav-icon" aria-hidden="true">&#9835;</span> Nossa
+            trilha
+          </button>
+        </nav>
+        <div class="sidebar-note">
+          <span class="small-flower" aria-hidden="true">&#10047;</span>
+          <p>Mesmo longe, sempre pertinho de voc&ecirc;.</p>
+          <small>Com carinho, todos os dias.</small>
+        </div>
+        <button
+          class="profile-link"
+          data-nav="ajustes"
+          aria-label="Abrir configuracoes"
+        >
+          <span class="profile-avatar" id="miniAvatar">V</span
+          ><span
+            ><strong id="miniName">Voc&ecirc;</strong
+            ><small>Meu perfil e privacidade</small></span
+          ><span class="chevron" aria-hidden="true">&rsaquo;</span>
+        </button>
+      </aside>
+      <div class="page-frame">
+        <header class="topbar">
+          <a class="mobile-brand" href="#inicio" data-nav="inicio"
+            ><span class="heart-small">&#9829;</span> entre n&oacute;s<span
+              class="brand-period"
+              >.</span
+            ></a
+          >
+          <div class="topbar-date" id="topbarDate"></div>
+          <button
+            class="topbar-profile"
+            data-nav="ajustes"
+            aria-label="Abrir meu perfil e ajustes"
+          >
+            <span class="profile-avatar" id="topAvatar">V</span
+            ><span class="only-desktop">Meu cantinho</span>
+          </button>
+        </header>
+        <div id="modeBanner" class="mode-banner" role="status"></div>
+        <main id="app" tabindex="-1" aria-live="polite"></main>
+        <footer class="page-footer">
+          Feito com <span aria-label="amor">&#9829;</span> para transformar
+          saudade em presen&ccedil;a.
+        </footer>
+      </div>
     </div>
-  </div>
-  <nav class="mobile-nav" aria-label="Navegacao movel">
-    <button class="mobile-tab active" data-nav="inicio"><span>&#8962;</span>In&iacute;cio</button>
-    <button class="mobile-tab" data-nav="diario"><span>&#9825;</span> Nosso dia</button>
-    <button class="mobile-tab" data-nav="desafios"><span>&#10038;</span>Desafios</button>
-    <button class="mobile-tab" data-nav="memorias"><span>&#10047;</span>Fotos</button>
-    <button class="mobile-tab" data-nav="calendario"><span>&#9638;</span>Agenda</button>
-  </nav>
-  <dialog id="entryDialog" class="entry-dialog" aria-labelledby="dialogTitle">
-    <form id="entryForm" method="dialog" novalidate>
-      <div class="dialog-header"><div><span class="eyebrow">NOSSO REGISTRO</span><h2 id="dialogTitle">Novo registro</h2></div><button class="close-icon" type="button" data-close aria-label="Fechar">&times;</button></div>
-      <div id="formFields"></div>
-      <p class="form-feedback" id="formFeedback" aria-live="polite"></p>
-      <div class="dialog-actions"><button type="button" class="btn btn-quiet" data-close>Cancelar</button><button type="submit" class="btn btn-primary" id="saveButton">Salvar lembran&ccedil;a</button></div>
-    </form>
-  </dialog>
-  <div class="toast" id="toast" role="status" aria-live="polite"></div>
-  <script type="module" src="./assets/app.js"></script>
-</body>
+    <nav class="mobile-nav" aria-label="Navegacao movel">
+      <button class="mobile-tab active" data-nav="inicio">
+        <span>&#8962;</span>In&iacute;cio
+      </button>
+      <button class="mobile-tab" data-nav="diario">
+        <span>&#9825;</span> Nosso dia
+      </button>
+      <button class="mobile-tab" data-nav="desafios">
+        <span>&#10038;</span>Desafios
+      </button>
+      <button class="mobile-tab" data-nav="memorias">
+        <span>&#10047;</span>Fotos
+      </button>
+      <button class="mobile-tab" data-nav="calendario">
+        <span>&#9638;</span>Agenda
+      </button>
+      <button class="mobile-tab" data-nav="musicas">
+        <span aria-hidden="true">&#9835;</span>Músicas
+      </button>
+    </nav>
+    <dialog id="entryDialog" class="entry-dialog" aria-labelledby="dialogTitle">
+      <form id="entryForm" method="dialog">
+        <div class="dialog-header">
+          <div>
+            <span class="eyebrow">NOSSO REGISTRO</span>
+            <h2 id="dialogTitle">Novo registro</h2>
+          </div>
+          <button
+            class="close-icon"
+            type="button"
+            data-close
+            aria-label="Fechar"
+          >
+            &times;
+          </button>
+        </div>
+        <div id="formFields"></div>
+        <p class="form-feedback" id="formFeedback" aria-live="polite"></p>
+        <div class="dialog-actions">
+          <button type="button" class="btn btn-quiet" data-close>
+            Cancelar</button
+          ><button type="submit" class="btn btn-primary" id="saveButton">
+            Salvar lembran&ccedil;a
+          </button>
+        </div>
+      </form>
+    </dialog>
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script type="module" src="./assets/app.js"></script>
+  </body>
 </html>

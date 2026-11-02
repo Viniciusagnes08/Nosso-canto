@@ -1,0 +1,12 @@
+{
+  "name": "nosso-canto",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "description": "Um espaço local para cultivar a presença a dois.",
+  "scripts": {
+    "test": "node test-smoke.cjs",
+    "dev": "python -m http.server 8765",
+    "format": "npx --yes prettier@3.6.2 --write assets/*.js assets/*.css index.html sw.js test-smoke.cjs"
+  }
+}
