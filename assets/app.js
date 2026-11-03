@@ -7,6 +7,7 @@ import { connectRecords } from "./cloud-records.js";
 import { mountReels } from "./reels.js";
 import { TOPIC_CATALOG, topicsForProfile } from "./universe-topics.js";
 import { profileImageToDataUrl } from "./profile-image.js";
+import { visibleMediaCaption } from "./reels-caption.js";
 import {
   mediaPut,
   mediaGet,
@@ -208,10 +209,10 @@ function daysTogether() {
 function formatEntry(e, showPhoto = true) {
   const t = TYPES[e.type] || TYPES.message;
   const mood = e.type === "mood" ? moodInfo(e.mood) : null;
-  const title =
+  const title = e.type === "memory" ? visibleMediaCaption(e) :
     e.title || (mood ? "Me senti " + mood.name.toLowerCase() : t.label);
   const note = e.note || e.description || "";
-  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto do registro" data-photo="${safe(e.photoId)}">` : ""}</div>${e.owner !== "partner" ? `<div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div>` : ""}</article>`;
+  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body">${title ? `<strong>${safe(title)}</strong>` : ""} ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto do registro" data-photo="${safe(e.photoId)}">` : ""}</div>${e.owner !== "partner" ? `<div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div>` : ""}</article>`;
 }
 function validUrl(url) {
   try {
@@ -397,7 +398,7 @@ function renderMemories() {
   return `${intro("FOTOS QUE ABRA\u00c7AM", "Nossas mem\u00f3rias", "Das fotografias mais antigas aos registros de hoje, todas t\u00eam um lugar especial.", '<button class="btn btn-primary" data-open="memory">+ Guardar uma foto</button>')}
  <div class="stack"><div class="notice">Google Fotos: por seguran\u00e7a, a API oficial s\u00f3 permite importar imagens que cada pessoa escolher. Selecione fotos do aparelho ou abra Meu cantinho → Suas conexões para importar fotos escolhidas no Google.</div>
  ${thisDay.length ? `<section class="paper-card">${sec("Neste dia, em outros anos", "Pequenos reencontros com o passado.")}<div class="photo-grid">${thisDay.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="Foto de ${safe(e.date)}"></div>`).join("")}</div></section>` : ""}
- <section class="paper-card">${sec("Nosso \u00e1lbum", `${photos.length} fotografia(s) guardada(s).`)}${photos.length ? `<div class="photo-grid">${photos.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="${safe(e.title || "Nossa mem\u00f3ria")}"><div class="photo-caption"><strong>${safe(e.title || "Nosso momento")}</strong><br>${displayDate(e.date, { day: "2-digit", month: "short", year: "numeric" })}</div>${e.owner !== "partner" ? `<button class="photo-delete" data-delete="${safe(e.id)}" aria-label="Excluir foto">\u00d7</button>` : ""}</div>`).join("")}</div>` : empty("\u{1F4F7}", "O \u00e1lbum espera por voc\u00eas", "Que tal uma foto do primeiro encontro ou de um momento inesquec\u00edvel?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}</section></div>`;
+ <section class="paper-card">${sec("Nosso \u00e1lbum", `${photos.length} fotografia(s) guardada(s).`)}${photos.length ? `<div class="photo-grid">${photos.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="${safe(visibleMediaCaption(e) || "Nossa memória")}"><div class="photo-caption">${visibleMediaCaption(e) ? `<strong>${safe(visibleMediaCaption(e))}</strong><br>` : ""}${displayDate(e.date, { day: "2-digit", month: "short", year: "numeric" })}</div>${e.owner !== "partner" ? `<button class="photo-delete" data-delete="${safe(e.id)}" aria-label="Excluir foto">\u00d7</button>` : ""}</div>`).join("")}</div>` : empty("\u{1F4F7}", "O \u00e1lbum espera por voc\u00eas", "Que tal uma foto do primeiro encontro ou de um momento inesquec\u00edvel?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}</section></div>`;
 }
 function renderMusic() {
   const tracks = ownItems("music");
@@ -550,6 +551,7 @@ function openModal(type, meta) {
           "title",
           "Nome da lembran\u00e7a",
           "Ex.: nosso primeiro passeio",
+          false,
         ) +
         dateField() +
         uploadField(true) +
@@ -665,7 +667,7 @@ async function saveModal(e) {
         await mediaPut(record.photoId, await compress(file));
       }
     }
-    if (!record.title && !["mood", "proof"].includes(type))
+    if (!record.title && !["mood", "proof", "memory"].includes(type))
       throw new Error("Preencha o t\u00edtulo do registro.");
     await addRecord(record);
     $("#entryDialog").close();
