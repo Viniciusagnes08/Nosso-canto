@@ -81,7 +81,7 @@ export function connectionCards() {
     })
     .join(
       "",
-    )}<p class="form-hint">Você escolhe o que importar de cada serviço. Depois de guardar, fotos, eventos e vídeos aparecem automaticamente para vocês dois.</p><p class="form-hint">Spotify: adicione links de músicas na Nossa trilha.</p></section>`;
+    )}<p class="form-hint">Você escolhe o que importar. Eventos e músicas ficam privados até você compartilhar cada item; fotos escolhidas aparecem para vocês dois.</p><p class="form-hint">Spotify: adicione links de músicas na Nossa trilha.</p></section>`;
 }
 async function googleConnect(provider) {
   if (tokenFor(provider)) return;
@@ -166,7 +166,7 @@ async function importSelected(records, options = {}) {
 }
 function chooseRows(items, toRecord, extra = "") {
   const body = document.querySelector("#connectionBody");
-  body.innerHTML = `${extra}<p class="setting-note">Selecione o conteúdo que deseja importar. Os registros serão compartilhados automaticamente no espaço do casal.</p><div class="connection-choices">${items.map((item, i) => `<label class="connection-choice"><input type="checkbox" value="${i}"><span><strong>${safe(item.label)}</strong><small>${safe(item.detail || "")}</small></span></label>`).join("")}</div>${items.length ? '<button id="importChosen" class="btn btn-primary">Guardar selecionados</button>' : '<div class="empty-state">Nenhum item encontrado neste período.</div>'}`;
+  body.innerHTML = `${extra}<p class="setting-note">Selecione o conteúdo que deseja guardar. Eventos e músicas ficam privados até você escolher compartilhar cada item.</p><div class="connection-choices">${items.map((item, i) => `<label class="connection-choice"><input type="checkbox" value="${i}"><span><strong>${safe(item.label)}</strong><small>${safe(item.detail || "")}</small></span></label>`).join("")}</div>${items.length ? '<button id="importChosen" class="btn btn-primary">Guardar selecionados</button>' : '<div class="empty-state">Nenhum item encontrado neste período.</div>'}`;
   body.querySelector("#importChosen")?.addEventListener("click", () => {
     const selected = [
       ...body.querySelectorAll(
@@ -182,7 +182,7 @@ function chooseRows(items, toRecord, extra = "") {
 }
 async function calendar() {
   await googleConnect("calendar");
-  const d = modal("Sua agenda", "<p>Importando todos os eventos das suas agendas…</p>");
+  const d = modal("Sua agenda", "<p>Buscando os eventos das suas agendas. Eles ficarão privados até você escolher compartilhar.</p>");
   const all = [];
   let next;
   do {
@@ -525,16 +525,16 @@ async function youtube() {
       try {
         const playlist = playlists[Number(selected.value)];
         const items = await jsonFetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(playlist.id)}&maxResults=50`, tokenFor("youtube"));
-        const records = (items.items || []).filter((x) => x.snippet?.resourceId?.videoId).map((x) => ({
+        const videos = (items.items || []).filter((x) => x.snippet?.resourceId?.videoId);
+        chooseRows(videos.map((x) => ({ raw: x, label: x.snippet.title || "Vídeo do YouTube", detail: playlist.snippet?.title || "YouTube" })), (x) => ({
           type: "music",
           title: x.snippet.title || "Vídeo do YouTube",
           date: localDay(),
           source: "youtube",
           externalId: x.snippet.resourceId.videoId,
           url: `https://www.youtube.com/watch?v=${x.snippet.resourceId.videoId}`,
-          shared: true,
+          shared: false,
         }));
-        await importSelected(records);
       } catch (err) { feedback(err.message); } finally { e.target.disabled = false; }
     };
   } catch (err) { feedback(err.message); }
@@ -589,6 +589,7 @@ export function initConnections(user, handlers) {
     }
   });
 }
+
 
 
 
