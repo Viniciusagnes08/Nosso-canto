@@ -8,6 +8,7 @@ import { mountReels } from "./reels.js";
 import { TOPIC_CATALOG, topicsForProfile } from "./universe-topics.js";
 import { profileImageToDataUrl } from "./profile-image.js";
 import { visibleMediaCaption } from "./reels-caption.js";
+import { installMemoryGallery } from "./memory-gallery.js";
 import {
   mediaPut,
   mediaGet,
@@ -387,18 +388,32 @@ function renderChallenges() {
  <div style="height:27px"></div>${sec("Algumas ideias para come\u00e7ar", "O desafio s\u00f3 come\u00e7a quando voc\u00ea escolher.")}
  <div class="challenge-list">${PRESETS.map((p, i) => `<article class="challenge-card"><span class="challenge-icon">${p.emoji}</span><h3>${safe(p.title)}</h3><p>${safe(p.desc)}</p><div class="challenge-bottom"><span class="tag neutral">Sugest\u00e3o</span><button class="btn btn-small btn-soft" data-preset="${i}">Come\u00e7ar \u2192</button></div></article>`).join("")}</div>`;
 }
+function memoryTile(entry, allowDelete = true) {
+  const title = visibleMediaCaption(entry);
+  const date = displayDate(entry.date, { day: "2-digit", month: "short", year: "numeric" });
+  const accessibleName = title ? "Abrir foto: " + title : "Abrir lembrança de " + date;
+  return `<div class="memory-tile">
+    <button type="button" class="memory-preview" data-memory-open="${safe(entry.photoId)}"
+      data-memory-caption="${safe(title)}" data-memory-date="${safe(date)}"
+      aria-label="${safe(accessibleName)}">
+      <img data-photo="${safe(entry.photoId)}" alt="${safe(title || "Fotografia do casal")}">
+      <span class="photo-caption">${title ? `<strong>${safe(title)}</strong><br>` : ""}${safe(date)}</span>
+    </button>
+    ${allowDelete && entry.owner !== "partner" ? `<button class="photo-delete" data-delete="${safe(entry.id)}" aria-label="Excluir foto">×</button>` : ""}
+  </div>`;
+}
 function renderMemories() {
-  const photos = ownItems("memory").filter((e) => e.photoId);
-  const day = localDay().slice(5),
-    thisDay = photos.filter(
-      (e) =>
-        e.date.slice(5) === day &&
-        e.date.slice(0, 4) !== localDay().slice(0, 4),
-    );
-  return `${intro("FOTOS QUE ABRA\u00c7AM", "Nossas mem\u00f3rias", "Das fotografias mais antigas aos registros de hoje, todas t\u00eam um lugar especial.", '<button class="btn btn-primary" data-open="memory">+ Guardar uma foto</button>')}
- <div class="stack"><div class="notice">Google Fotos: por seguran\u00e7a, a API oficial s\u00f3 permite importar imagens que cada pessoa escolher. Selecione fotos do aparelho ou abra Meu cantinho → Suas conexões para importar fotos escolhidas no Google.</div>
- ${thisDay.length ? `<section class="paper-card">${sec("Neste dia, em outros anos", "Pequenos reencontros com o passado.")}<div class="photo-grid">${thisDay.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="Foto de ${safe(e.date)}"></div>`).join("")}</div></section>` : ""}
- <section class="paper-card">${sec("Nosso \u00e1lbum", `${photos.length} fotografia(s) guardada(s).`)}${photos.length ? `<div class="photo-grid">${photos.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="${safe(visibleMediaCaption(e) || "Nossa memória")}"><div class="photo-caption">${visibleMediaCaption(e) ? `<strong>${safe(visibleMediaCaption(e))}</strong><br>` : ""}${displayDate(e.date, { day: "2-digit", month: "short", year: "numeric" })}</div>${e.owner !== "partner" ? `<button class="photo-delete" data-delete="${safe(e.id)}" aria-label="Excluir foto">\u00d7</button>` : ""}</div>`).join("")}</div>` : empty("\u{1F4F7}", "O \u00e1lbum espera por voc\u00eas", "Que tal uma foto do primeiro encontro ou de um momento inesquec\u00edvel?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}</section></div>`;
+  const photos = ownItems("memory").filter(entry => entry.photoId);
+  const today = localDay();
+  const todayMemories = photos.filter(entry => entry.date?.slice(5) === today.slice(5) && entry.date?.slice(0, 4) !== today.slice(0, 4));
+  return `${intro("FOTOS QUE ABRAÇAM", "Nossas memórias", "Das fotografias mais antigas aos registros de hoje, todas têm um lugar especial.", '<button class="btn btn-primary" data-open="memory">+ Guardar uma foto</button>')}
+  <div class="stack">
+    <div class="notice">Google Fotos permite escolher as fotos que serão importadas. Depois de guardadas, as lembranças aparecem para vocês dois.</div>
+    ${todayMemories.length ? `<section class="paper-card">${sec("Neste dia, em outros anos", "Pequenos reencontros com o passado.")}<div class="photo-grid">${todayMemories.map(entry => memoryTile(entry, false)).join("")}</div></section>` : ""}
+    <section class="paper-card">${sec("Nosso álbum", `${photos.length} fotografia(s) guardada(s).`)}
+    ${photos.length ? `<div class="photo-grid">${photos.map(entry => memoryTile(entry)).join("")}</div>` : empty("📷", "O álbum espera por vocês", "Que tal uma foto do primeiro encontro ou de um momento inesquecível?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}
+    </section>
+  </div>`;
 }
 function renderMusic() {
   const tracks = ownItems("music");
@@ -1197,6 +1212,7 @@ export async function startApp(user, options = {}) {
     }
   });
   if (!localOnly) mountReels(user);
+  installMemoryGallery($("#app"));
   navigate(tab);
 }
 
