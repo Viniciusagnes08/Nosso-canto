@@ -52,14 +52,18 @@ test("no duplicate profile, filename labels or privacy chooser in reels", async 
   assert.match(source, /const shared = true/);
   assert.match(source, /visibleMediaCaption\(item\)/);
 });
-test("every newly added entry and provider import is shared automatically", async () => {
+test("events and songs require an explicit sharing choice", async () => {
   const app = await readFile("assets/app.js","utf8");
   const providers = await readFile("assets/connections.js","utf8");
-  assert.match(app,/async function addRecord\(record\) \{[\s\S]*?record\.shared = true;/);
-  assert.doesNotMatch(app,/form\.has\("shared"\)/);
-  assert.doesNotMatch(app,/name="shared"/);
+  const cloud = await readFile("assets/cloud-records.js","utf8");
+  assert.match(app,/record\.shared = \["event", "music"\]\.includes\(record\.type\)/);
+  assert.match(app,/name="shared"/);
+  assert.match(app,/form\.has\("shared"\)/);
+  assert.match(app,/data-toggle-share/);
+  assert.match(app,/shared: \["event", "music"\]\.includes\(input\.type\) \? false : true/);
+  assert.match(cloud,/entry\.data\(\)\.sharingSelected !== true/);
   assert.match(providers,/title: "", \/\/ The Google Photos filename is not a caption/);
-  assert.match(providers,/shared: true/);
+  assert.match(providers,/shared: false/);
 });
 test("only one editable profile and own personal topic selection remain",async()=>{
   const app=await readFile("assets/app.js","utf8");
@@ -71,4 +75,5 @@ test("only one editable profile and own personal topic selection remain",async()
   assert.doesNotMatch(universe,/const TOPICS = \["bts", "ballet"\]/);
   assert.match(universe,/state\.topics\.includes\(item\.topic\)/);
 });
+
 
