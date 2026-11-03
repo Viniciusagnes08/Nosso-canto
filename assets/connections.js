@@ -8,6 +8,16 @@ import {
   seconds,
 } from "./integration-models.js";
 const googleTokens = new Map();
+const persistent = {};
+async function api(provider, action, payload) {
+  const { data } = await auth.auth.getSession();
+  if (!data.session?.access_token) throw new Error("Entre novamente.");
+  const path = provider ? `/api/connections/${provider}/${action}` : "/api/connections/status";
+  const response = await fetch(path, {method:provider?"POST":"GET",headers:{"Authorization":`Bearer ${data.session.access_token}`,"Content-Type":"application/json"},body:provider?JSON.stringify(payload||{}):undefined,cache:"no-store"});
+  const result = await response.json();
+  if (!response.ok) throw new Error(result.error || "Não foi possível acessar a conexão.");
+  return result;
+}
 let googleScript,
   contextUser = null,
   callbacks = null,
@@ -42,22 +52,8 @@ function googleReady() {
     });
   return googleScript;
 }
-function tokenFor(provider) {
-  const t = googleTokens.get(provider);
-  if (!t || Date.now() >= t.expires) {
-    googleTokens.delete(provider);
-    return null;
-  }
-  return t.token;
-}
-function spotifyToken() {
-  try {
-    const t = JSON.parse(sessionStorage.getItem(spotifyKey()));
-    if (t?.userId === contextUser.id && t.expires > Date.now()) return t.token;
-  } catch {}
-  sessionStorage.removeItem(spotifyKey());
-  return null;
-}
+function tokenFor(provider) { return persistent[provider]?.connected ? `provider:${provider}` : null; }
+function spotifyToken() { return tokenFor("spotify"); }
 export function connectionCards() {
   return `<section class="paper-card connections"><div class="section-heading"><div><h2>Suas conexões</h2><p>Escolha o que traz para o nosso cantinho.</p></div></div>${[
     [
@@ -68,7 +64,7 @@ export function connectionCards() {
     [
       "calendar",
       "Google Agenda",
-      "Importe eventos escolhidos ou apenas horários ocupados.",
+      "Importe automaticamente os eventos das suas agendas.",
     ],
     [
       "spotify",
@@ -83,61 +79,25 @@ export function connectionCards() {
   ]
     .map(([id, name, desc]) => {
       const configured =
-          id === "spotify"
-            ? Boolean(config.SPOTIFY_CLIENT_ID)
-            : Boolean(config.GOOGLE_CLIENT_ID),
+          Boolean(persistent[id]?.configured),
         connected =
-          id === "spotify"
-            ? Boolean(contextUser && spotifyToken())
-            : Boolean(tokenFor(id));
-      return `<div class="connection-card"><div><strong>${name}</strong><p>${desc}</p><span class="tag ${connected ? "green" : "neutral"}">${connected ? "Conectado nesta sessão" : configured ? "Não conectado" : "Disponível em breve"}</span></div><div class="connection-actions"><button type="button" class="btn btn-soft" data-connect="${id}" ${configured ? "" : "disabled"}>${connected ? "Escolher conteúdo" : "Conectar"}</button>${connected ? `<button class="text-link" data-disconnect="${id}">Desconectar</button>` : ""}</div></div>`;
+          Boolean(persistent[id]?.connected);
+      return `<div class="connection-card"><div><strong>${name}</strong><p>${desc}</p><span class="tag ${connected ? "green" : "neutral"}">${connected ? "Conectado à sua conta" : configured ? "Não conectado" : "Disponível em breve"}</span></div><div class="connection-actions"><button type="button" class="btn btn-soft" data-connect="${id}" ${configured ? "" : "disabled"}>${connected ? "Escolher conteúdo" : "Conectar"}</button>${connected ? `<button class="text-link" data-disconnect="${id}">Desconectar</button>` : ""}</div></div>`;
     })
     .join(
       "",
     )}<p class="form-hint">Você escolhe o que importar de cada serviço. Depois de guardar, fotos, eventos e músicas aparecem automaticamente para vocês dois.</p></section>`;
 }
 async function googleConnect(provider) {
-  if (!config.GOOGLE_CLIENT_ID)
-    throw new Error("A conexão com o Google ainda não foi ativada.");
-  await requireUser();
-  await googleReady();
-  if (!tokenFor(provider))
-    await new Promise((resolve, reject) => {
-      const client = google.accounts.oauth2.initTokenClient({
-        client_id: config.GOOGLE_CLIENT_ID,
-        scope: SCOPES[provider],
-        include_granted_scopes: false,
-        callback: (response) => {
-          if (
-            response.error ||
-            !google.accounts.oauth2.hasGrantedAllScopes(
-              response,
-              ...SCOPES[provider].split(" "),
-            )
-          )
-            return reject(
-              new Error(
-                "A permissão não foi concedida. Você pode tentar novamente quando quiser.",
-              ),
-            );
-          googleTokens.set(provider, {
-            token: response.access_token,
-            expires: Date.now() + (Number(response.expires_in) - 60) * 1000,
-          });
-          resolve();
-        },
-        error_callback: () =>
-          reject(
-            new Error(
-              "A janela de conexão foi fechada ou bloqueada. Tente novamente.",
-            ),
-          ),
-      });
-      client.requestAccessToken({ prompt: "consent" });
-    });
-  notify();
+  if (tokenFor(provider)) return;
+  const result = await api(provider,"start");
+  location.assign(result.url);
+  return new Promise(() => {});
 }
 async function jsonFetch(url, token, options = {}) {
+  if (token?.startsWith("provider:")) {
+    return api(token.slice(9),"fetch",{url:String(url),method:options.method||"GET",body:options.body?JSON.parse(options.body):undefined});
+  }
   const res = await fetch(url, {
     ...options,
     headers: { Authorization: `Bearer ${token}`, ...options.headers },
@@ -357,7 +317,6 @@ async function photos() {
                   Authorization: `Bearer ${data.session.access_token}`,
                 },
                 body: JSON.stringify({
-                  googleToken: tokenFor("photos"),
                   sessionId: current.id,
                   mediaId: item.id,
                 }),
@@ -421,9 +380,9 @@ function randomString() {
     .replace(/=/g, "");
 }
 export async function connectSpotify() {
-  const user = await requireUser();
-  if (!config.SPOTIFY_CLIENT_ID)
-    throw new Error("A conexão com o Spotify ainda não foi ativada.");
+  const result = await api("spotify","start");
+  location.assign(result.url);
+  return new Promise(() => {});
   const verifier = randomString(),
     state = randomString(),
     digest = await crypto.subtle.digest(
@@ -459,6 +418,7 @@ export async function connectSpotify() {
   location.assign(url);
 }
 export async function completeSpotify() {
+  if (location.pathname === "/spotify-callback.html") return;
   const user = await requireUser();
   contextUser = user;
   const params = new URLSearchParams(location.search),
@@ -585,6 +545,11 @@ async function youtube() {
   } catch (err) { feedback(err.message); }
 }
 async function disconnect(provider) {
+  await api(provider,"disconnect");
+  persistent[provider] = { ...persistent[provider],connected:false };
+  modal("Conta desconectada","<p>A conexão foi removida. Os registros já importados permanecem no seu cantinho.</p>");
+  notify();
+  return;
   if (provider === "spotify") {
     sessionStorage.removeItem(spotifyKey());
     modal(
@@ -609,6 +574,7 @@ async function disconnect(provider) {
 export function initConnections(user, handlers) {
   contextUser = user;
   callbacks = handlers;
+  api(null).then((status) => { Object.assign(persistent,status); notify(); }).catch((error) => handlers.toast(error.message));
   document.addEventListener("click", async (event) => {
     const button = event.target.closest("[data-connect],[data-disconnect]");
     if (!button) return;
@@ -628,5 +594,6 @@ export function initConnections(user, handlers) {
     }
   });
 }
+
 
 
