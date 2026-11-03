@@ -111,7 +111,6 @@
               ><span class="only-desktop">Meu cantinho</span>
             </button>
           </header>
-          <div id="modeBanner" class="mode-banner" role="status"></div>
           <main id="app" tabindex="-1" aria-live="polite"></main>
           <footer class="page-footer">
             Feito com <span aria-label="amor">&#9829;</span> para transformar
@@ -123,25 +122,25 @@
         <button class="mobile-tab active" data-nav="inicio">
           <span>&#8962;</span>In&iacute;cio
         </button>
+        <button class="mobile-tab" type="button" data-reels-open><span aria-hidden="true">▶</span>Reels</button>
         <button class="mobile-tab" data-nav="diario">
           <span>&#9825;</span> Nosso dia
-        </button>
-        <button class="mobile-tab" data-nav="memorias">
-          <span>&#10047;</span>Fotos
         </button>
         <button class="mobile-tab" data-nav="calendario">
           <span>&#9638;</span>Agenda
         </button>
-        <button class="mobile-tab mobile-more-toggle" type="button" aria-expanded="false" aria-controls="mobileMore" aria-label="Abrir mais seções"><span aria-hidden="true">☷</span>Mais</button>
-        <div class="mobile-more" id="mobileMore" hidden>
+        <details class="mobile-more-shell">
+          <summary class="mobile-tab mobile-more-toggle"><span aria-hidden="true">☷</span>Mais</summary>
+          <div class="mobile-more" id="mobileMore">
           <strong>Mais do nosso espaço</strong>
-          <button type="button" data-reels-open>Momentos</button>
           <button type="button" data-universe-open>Meu Universo</button>
           <button type="button" data-nav="humor">Humor</button>
           <button type="button" data-nav="desafios">Desafios</button>
+          <button type="button" data-nav="memorias">Memórias</button>
           <button type="button" data-nav="musicas">Nossa trilha</button>
           <button type="button" data-nav="ajustes">Perfil e ajustes</button>
-        </div>
+          </div>
+        </details>
       </nav>
       <dialog
         id="entryDialog"
