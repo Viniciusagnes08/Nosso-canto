@@ -446,13 +446,18 @@ main:focus {
   .mobile-nav { grid-template-columns: repeat(5,minmax(0,1fr)); overflow: visible; padding: 7px 8px calc(7px + env(safe-area-inset-bottom)); }
   .mobile-nav > .mobile-tab { min-width: 0; min-height: 53px; padding: 5px 2px; color: #69535b; font-size: 11px; cursor: pointer; }
   .mobile-nav > .mobile-tab.active { color: #813d5c; background: #f5e5e9; border-radius: 12px; }
+  .mobile-more-shell { min-width: 0; }
+  .mobile-more-toggle { display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 4px; min-height: 53px; border-radius: 12px; color: #69535b; font-size: 11px; font-weight: 650; cursor: pointer; list-style: none; }
+  .mobile-more-toggle::-webkit-details-marker { display: none; }
+  .mobile-more-toggle span { font: 24px Georgia,serif; line-height: 22px; }
+  .mobile-more-shell[open] .mobile-more-toggle, .mobile-more-toggle.active { color: #813d5c; background: #f5e5e9; }
   .mobile-more { position: absolute; bottom: calc(100% + 8px); right: 10px; width: min(290px,calc(100vw - 20px)); display: grid; gap: 3px; padding: 12px; border: 1px solid #e5d4d8; border-radius: 18px; background: #fffcfa; box-shadow: 0 14px 40px #593a4429; }
-  .mobile-more[hidden] { display: none; }
+  .mobile-more-shell:not([open]) .mobile-more { display: none; }
   .mobile-more strong { padding: 7px 9px 10px; font-size: 13px; color: #6b3b50; }
   .mobile-more button { min-height: 44px; width: 100%; border: 0; border-radius: 10px; padding: 9px 12px; background: transparent; color: #59464f; text-align: left; font: inherit; font-size: 14px; cursor: pointer; }
   .mobile-more button:hover, .mobile-more button.active { background: #f5e5e9; color: #75334f; }
 }
-.sidebar :is(button,a):focus-visible, .mobile-nav button:focus-visible { outline: 3px solid #a95775; outline-offset: 2px; }
+.sidebar :is(button,a):focus-visible, .mobile-nav :is(button,summary):focus-visible { outline: 3px solid #a95775; outline-offset: 2px; }
 @media (prefers-reduced-motion: reduce) { .nav-link { transition: none; } }
 .profile-topic span{color:#aa819f;}
 @media(max-width:900px){.profile-topic-grid{grid-template-columns:repeat(2,minmax(0,1fr));}}
