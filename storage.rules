@@ -1,0 +1,35 @@
+rules_version = '2';
+service firebase.storage {
+  match /b/{bucket}/o {
+    function member() {
+      return request.auth != null
+        && request.auth.token.email_verified == true
+        && request.auth.token.email in [
+          'viniciusagnes1092@gmail.com',
+          'mirnacaterine@gmail.com'
+        ];
+    }
+    match /reels/{authorId}/{fileName} {
+      // Private files are readable by their owner; shared files only by the couple.
+      allow get: if member()
+        && (request.auth.uid == authorId || resource.metadata.shared == 'true');
+      allow list: if false;
+      allow create: if member()
+        && request.auth.uid == authorId
+        && request.resource.size > 0
+        && request.resource.size <= 24 * 1024 * 1024
+        && request.resource.contentType.matches('image/gif|video/mp4|video/webm')
+        && request.resource.metadata.authorId == authorId
+        && request.resource.metadata.shared in ['true', 'false'];
+      // Only owner may change whether a file is shared.
+      allow update: if member()
+        && request.auth.uid == authorId
+        && request.resource.size == resource.size
+        && request.resource.contentType == resource.contentType
+        && request.resource.metadata.authorId == authorId
+        && request.resource.metadata.shared in ['true', 'false'];
+      allow delete: if member() && request.auth.uid == authorId;
+    }
+  }
+}
+

@@ -1,6 +1,7 @@
 import { getApp } from "@firebase/app";
 import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, getDoc, serverTimestamp } from "@firebase/firestore";
 import { mediaGet, mediaPut } from "./media.js";
+import { cleanProfile } from "./reels-model.js";
 
 const SPACE_ID = "nosso-canto";
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
@@ -39,11 +40,6 @@ async function hydrate(raw, userId) {
   delete record.updatedAt;
   return record;
 }
-const cleanProfile = (value = {}) => ({
-  self: String(value.self || "Você").trim().slice(0, 40),
-  partner: String(value.partner || "Seu amor").trim().slice(0, 40),
-  anniversary: /^\d{4}-\d{2}-\d{2}$/.test(String(value.anniversary || "")) ? String(value.anniversary) : "",
-});
 export async function connectRecords(userId, initialRecords, receive, failure, initialProfile, receiveProfile) {
   if (!userId) throw new Error("Entre para sincronizar.");
   const db = getFirestore(getApp());
@@ -57,7 +53,9 @@ export async function connectRecords(userId, initialRecords, receive, failure, i
   const own = new Map(), shared = new Map();
   let publishing = Promise.resolve();
   const publish = () => {
-    const snapshot = [...new Map([...shared, ...own]).values()];
+    const snapshot = [...new Map([...shared, ...own]).values()].filter(
+      row => row.type !== "reel" && row.type !== "universe",
+    );
     publishing = publishing.then(async () => receive(await Promise.all(snapshot.map((row) => hydrate(row, userId))))).catch(failure);
   };
   const listen = (filter, target) => onSnapshot(query(records, filter), (snapshot) => {
@@ -79,4 +77,5 @@ export async function connectRecords(userId, initialRecords, receive, failure, i
     close() { stopOwn(); stopShared(); stopProfile(); own.clear(); shared.clear(); },
   };
 }
+
 

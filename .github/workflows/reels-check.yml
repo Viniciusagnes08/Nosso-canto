@@ -1,0 +1,32 @@
+name: Validar Momentos e Perfis
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [feature/perfis-reels-memorias-20261103]
+
+permissions:
+  contents: read
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "24"
+          cache: npm
+      - name: Instalar
+        run: npm ci
+      - name: Executar testes
+        run: npm test
+      - name: Compilar
+        run: npm run build
+

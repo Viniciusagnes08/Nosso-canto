@@ -11,10 +11,11 @@ const config = Object.fromEntries(
     "GOOGLE_CLIENT_ID",
     "SPOTIFY_CLIENT_ID",
     "GOOGLE_LOGIN_ENABLED",
+    "FIREBASE_STORAGE_BUCKET",
   ].map((key) => [key, process.env[key] || (key === "AUTH_PROVIDER" ? "firebase" : "")]),
 );
 await build({
-  entryPoints: ["assets/boot.js", "assets/spotify-callback.js"],
+  entryPoints: ["assets/boot.js", "assets/spotify-callback.js", "assets/universe.js"],
   outdir: "dist/assets",
   bundle: true,
   splitting: true,
@@ -35,6 +36,8 @@ for (const file of [
   "layout.css",
   "account.css",
   "mood.css",
+  "reels.css",
+  "universe.css",
   "icon.svg",
 ])
   await cp("assets/" + file, new URL("assets/" + file, output));
@@ -50,3 +53,4 @@ console.log(
 await cp("assets/stickers", new URL("assets/stickers/", output), {
   recursive: true,
 });
+
