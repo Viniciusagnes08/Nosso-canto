@@ -158,6 +158,8 @@ function navigate(next) {
     if (yes) b.setAttribute("aria-current", "page");
     else b.removeAttribute("aria-current");
   });
+  const moreToggle = document.querySelector(".mobile-more-toggle");
+  moreToggle?.classList.toggle("active", ["humor", "desafios", "musicas", "ajustes"].includes(tab));
   location.hash = next;
   render();
   $("#app").focus({ preventScroll: true });
@@ -939,9 +941,26 @@ async function showAdvice() {
   }
 }
 window.addEventListener("click", async (e) => {
+  const moreToggle = e.target.closest(".mobile-more-toggle");
+  const moreMenu = document.querySelector("#mobileMore");
+  if (moreToggle) {
+    moreMenu.hidden = !moreMenu.hidden;
+    moreToggle.setAttribute("aria-expanded", String(!moreMenu.hidden));
+    return;
+  }
+  if (moreMenu && !moreMenu.hidden && !e.target.closest("#mobileMore")) {
+    moreMenu.hidden = true;
+    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
+  }
+  if (moreMenu && e.target.closest("#mobileMore button")) {
+    moreMenu.hidden = true;
+    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
+  }
   const nav = e.target.closest("[data-nav]");
   if (nav) {
     e.preventDefault();
+    if (moreMenu) moreMenu.hidden = true;
+    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
     navigate(nav.dataset.nav);
     return;
   }
@@ -1049,6 +1068,15 @@ window.addEventListener("click", async (e) => {
   if (e.target.closest("[data-surprise]")) {
     showAdvice();
     return;
+  }
+});
+window.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const menu = document.querySelector("#mobileMore");
+  if (menu && !menu.hidden) {
+    menu.hidden = true;
+    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
+    document.querySelector(".mobile-more-toggle")?.focus();
   }
 });
 document.addEventListener("submit", async (e) => {
@@ -1237,4 +1265,5 @@ export async function startApp(user, options = {}) {
   installMusicEmbed($("#app"));
   navigate(tab);
 }
+
 
