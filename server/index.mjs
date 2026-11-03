@@ -44,8 +44,8 @@ function save() {
   });
   return writeQueue;
 }
-function send(res, status, value) {
-  res.writeHead(status, { "Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store", "X-Content-Type-Options":"nosniff" });
+function send(res, status, value, headers={}) {
+  res.writeHead(status, { "Content-Type":"application/json; charset=utf-8", "Cache-Control":"no-store", "X-Content-Type-Options":"nosniff", ...headers });
   res.end(JSON.stringify(value));
 }
 async function userFrom(req) {
@@ -97,6 +97,8 @@ function bodyJson(req) {
 async function api(req,res,url) {
   if (url.pathname === "/api/oauth/callback/google" || url.pathname === "/spotify-callback.html") {
     const state = url.searchParams.get("state");
+    const cookie=(req.headers.cookie||"").split(";").map(x=>x.trim()).find(x=>x.startsWith("nc_oauth_state="))?.slice(15);
+    if(!state || cookie!==state) throw new Error("Conexão expirada neste navegador.");
     const attempt = pending.get(state);
     pending.delete(state);
     if (!attempt || attempt.created < Date.now()-600000 || url.searchParams.has("error")) throw new Error("Conexão cancelada ou expirada.");
@@ -105,7 +107,7 @@ async function api(req,res,url) {
     database[attempt.uid] ||= {};
     database[attempt.uid][attempt.provider] = encrypt({ ...token, expires:Date.now() + token.expires_in*1000 });
     await save();
-    res.writeHead(302, { Location:origin + "/#ajustes", "Cache-Control":"no-store" }); res.end(); return;
+    res.writeHead(302, { Location:origin + "/#ajustes", "Cache-Control":"no-store", "Set-Cookie":"nc_oauth_state=; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=0" }); res.end(); return;
   }
   const uid = await userFrom(req);
   if (url.pathname === "/api/connections/status" && req.method === "GET") {
@@ -123,7 +125,7 @@ async function api(req,res,url) {
       client_id:p.id, response_type:"code", redirect_uri:redirect(provider), scope:p.scope, state,
       ...(google ? {access_type:"offline",prompt:"consent",include_granted_scopes:"false"} : {show_dialog:"true"})
     }).toString();
-    return send(res,200,{url:target.href});
+    return send(res,200,{url:target.href},{"Set-Cookie":`nc_oauth_state=${state}; Path=/; HttpOnly; Secure; SameSite=Lax; Max-Age=600`});
   }
   if (url.pathname.endsWith("/disconnect") && req.method === "POST") {
     const saved = database[uid]?.[provider];
