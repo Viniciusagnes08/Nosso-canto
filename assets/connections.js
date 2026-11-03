@@ -88,7 +88,7 @@ export function connectionCards() {
     })
     .join(
       "",
-    )}<p class="form-hint">Nada é importado sem sua escolha. O conteúdo começa privado na sua conta; quando você marcar como compartilhado, aparece para vocês dois.</p></section>`;
+    )}<p class="form-hint">Você escolhe o que importar de cada serviço. Depois de guardar, fotos, eventos e músicas aparecem automaticamente para vocês dois.</p></section>`;
 }
 async function googleConnect(provider) {
   if (!config.GOOGLE_CLIENT_ID)
@@ -205,7 +205,7 @@ async function importSelected(records, options = {}) {
 }
 function chooseRows(items, toRecord, extra = "") {
   const body = document.querySelector("#connectionBody");
-  body.innerHTML = `${extra}<p class="setting-note">Selecione apenas o que deseja guardar no seu perfil.</p><div class="connection-choices">${items.map((item, i) => `<label class="connection-choice"><input type="checkbox" value="${i}"><span><strong>${safe(item.label)}</strong><small>${safe(item.detail || "")}</small></span></label>`).join("")}</div>${items.length ? '<button id="importChosen" class="btn btn-primary">Guardar selecionados</button>' : '<div class="empty-state">Nenhum item encontrado neste período.</div>'}`;
+  body.innerHTML = `${extra}<p class="setting-note">Selecione o conteúdo que deseja importar. Os registros serão compartilhados automaticamente no espaço do casal.</p><div class="connection-choices">${items.map((item, i) => `<label class="connection-choice"><input type="checkbox" value="${i}"><span><strong>${safe(item.label)}</strong><small>${safe(item.detail || "")}</small></span></label>`).join("")}</div>${items.length ? '<button id="importChosen" class="btn btn-primary">Guardar selecionados</button>' : '<div class="empty-state">Nenhum item encontrado neste período.</div>'}`;
   body.querySelector("#importChosen")?.addEventListener("click", () => {
     const selected = [
       ...body.querySelectorAll(
@@ -359,7 +359,7 @@ async function photos() {
           .slice(0, MAX_PHOTO_SELECTION);
         const preview = photos.slice(0, 100);
         document.querySelector("#connectionBody").innerHTML =
-          `<p>${photos.length} foto(s) selecionada(s). As cópias serão guardadas no seu perfil e aparecerão em Momentos → Minhas. Para compartilhar com seu amor, toque em Publicar na foto escolhida.</p><ul>${preview.map((x) => `<li>${safe(x.mediaFile?.filename || "Foto")}</li>`).join("")}</ul>${photos.length > preview.length ? `<p class="form-hint">E mais ${photos.length - preview.length} foto(s).</p>` : ""}<button class="btn btn-primary" id="savePhotos" ${photos.length ? "" : "disabled"}>Guardar fotos selecionadas</button>`;
+          `<p>${photos.length} foto(s) selecionada(s). As fotos selecionadas serão compartilhadas automaticamente no espaço do casal e poderão aparecer em Momentos.</p><ul>${preview.map((x) => `<li>${safe(x.mediaFile?.filename || "Foto")}</li>`).join("")}</ul>${photos.length > preview.length ? `<p class="form-hint">E mais ${photos.length - preview.length} foto(s).</p>` : ""}<button class="btn btn-primary" id="savePhotos" ${photos.length ? "" : "disabled"}>Guardar fotos selecionadas</button>`;
         document.querySelector("#savePhotos").onclick = async (e) => {
           if (busy) return;
           busy = true;
@@ -392,15 +392,13 @@ async function photos() {
                 [
                   {
                     type: "memory",
-                    title: String(
-                      item.mediaFile?.filename || "Uma lembrança",
-                    ).slice(0, 170),
+                    title: "", // The Google Photos filename is not a caption.
                     date: item.createTime
                       ? localDay(new Date(item.createTime))
                       : localDay(),
                     source: "google-photos",
                     externalId: item.id,
-                    shared: false,
+                    shared: true,
                   },
                 ],
                 { blob },
