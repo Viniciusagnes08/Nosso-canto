@@ -1442,3 +1442,16 @@ main {
     transition-duration: 0.001ms !important;
   }
 }
+
+.legal-page {
+  width: min(760px, calc(100% - 32px));
+  margin: 48px auto;
+  padding: clamp(24px, 5vw, 56px);
+  border: 1px solid var(--line);
+  border-radius: 28px;
+  background: var(--paper);
+  box-shadow: var(--shadow);
+}
+.legal-page h1 { margin: 24px 0 8px; }
+.legal-page h2 { margin: 28px 0 8px; font-size: 1.25rem; }
+.legal-page p { line-height: 1.7; }

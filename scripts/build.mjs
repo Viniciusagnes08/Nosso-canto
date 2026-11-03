@@ -25,6 +25,7 @@ await build({
 });
 for (const file of [
   "index.html",
+  "privacy.html",
   "spotify-callback.html",
   "manifest.webmanifest",
 ])
