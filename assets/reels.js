@@ -5,6 +5,7 @@ import { config } from "./config.js";
 import { mediaGet } from "./media.js";
 import { safe } from "./utils.js";
 import { visibleMediaCaption } from "./reels-caption.js";
+import { inMediaWindow, reelViewVersion } from "./core/media-window.js";
 import { SPACE_ID, identifyMedia, cleanProfile, uniqueFeed, canEditPost } from "./reels-model.js";
 
 const e = (value) => safe(String(value ?? ""));
@@ -20,7 +21,7 @@ const state = {
   root: null, feed: null, profile: cleanProfile(), screen: "feed",
   open: false, unsub: [], observer: null, active: null, urls: new Map(),
   previewUrl: "", photoPreview: "", loading: false, status: "", currentList: [],
-  favorites: new Set(), currentFile: null
+  favorites: new Set(), currentFile: null, lastFeedVersion: ""
 };
 
 function storage() {
@@ -40,13 +41,17 @@ function avatarMarkup(item) {
     : '<span class="reels-avatar reels-avatar-letter" aria-hidden="true">' + e(accountLabel(item).slice(0, 1).toUpperCase()) + "</span>";
 }
 function getVisual(item) {
-  const data = validImage(item.mediaData || item.photoData);
-  if (data) return '<img class="reels-image" src="' + e(data) + '" alt="' + e(visibleMediaCaption(item) || "Foto") + '" loading="lazy">';
+  // Do not paste large base64 images into innerHTML. Render a lightweight shell,
+  // then attach an authenticated, bounded object URL when the reel is visible.
+  if (item.mediaData || item.photoData || item.photoId) {
+    const source = item.photoId ? ' data-reels-photo="' + e(item.photoId) + '"' : ' data-reels-inline="true"';
+    return '<img class="reels-image" loading="lazy"' + source + ' alt="' +
+      e(visibleMediaCaption(item) || "Memória do casal") + '">';
+  }
   if (item.storagePath && (item.mediaKind === "video" || item.mediaKind === "gif"))
     return item.mediaKind === "video"
       ? '<video class="reels-video" playsinline muted loop preload="none" aria-label="' + e(visibleMediaCaption(item) || "Vídeo do casal") + '"></video>'
       : '<img class="reels-image reels-gif" alt="' + e(visibleMediaCaption(item) || "Animação do casal") + '">';
-  if (item.photoId) return '<img class="reels-image" data-reels-photo="' + e(item.photoId) + '" alt="' + e(visibleMediaCaption(item) || "Memória") + '">';
   return '<div class="reels-no-media">Mídia indisponível neste aparelho.</div>';
 }
 function renderCard(item, index) {
@@ -74,32 +79,64 @@ function clearMedia() {
   state.urls.clear();
   state.active = null;
 }
+function releaseOutsideWindow(activeIndex) {
+  for (const card of state.root?.querySelectorAll(".reels-card") || []) {
+    const index = Number(card.dataset.reelsIndex);
+    if (inMediaWindow(index, activeIndex, state.currentList.length)) continue;
+    const video = card.querySelector("video");
+    if (video) {
+      video.pause();
+      video.removeAttribute("src");
+      video.load();
+    }
+    const image = card.querySelector(".reels-image");
+    if (image) image.removeAttribute("src");
+    const id = card.dataset.reelsId;
+    const url = state.urls.get(id);
+    if (url) URL.revokeObjectURL(url);
+    state.urls.delete(id);
+    delete card.dataset.assetReady;
+    card.querySelector(".reels-media-error")?.remove();
+  }
+}
 async function hydrateMedia(card, item) {
   if (!card?.isConnected || card.dataset.assetReady || card.dataset.assetLoading) return;
-  const el = card.querySelector(".reels-video,.reels-gif,img[data-reels-photo]");
+  const el = card.querySelector(".reels-video,.reels-gif,img[data-reels-photo],img[data-reels-inline]");
   if (!el) return;
   card.dataset.assetLoading = "true";
   try {
-    let blob;
+    let blob = null;
     if (item.storagePath) {
       if (!config.FIREBASE_STORAGE_BUCKET) throw new Error("Armazenamento não configurado.");
       blob = await getBlob(fileRef(storage(), item.storagePath), 26 * 1024 * 1024);
-    } else if (item.photoId && item.authorId === state.user?.id) {
-      blob = await mediaGet(item.photoId);
+    } else if (item.photoId) {
+      // The partner's photo is locally hydrated by cloud-records.js as well.
+      blob = await mediaGet(item.photoId).catch(() => null);
+      // Listener ordering may show the Reel before the image reaches IndexedDB.
+      if (!blob && validImage(item.photoData)) blob = await (await fetch(item.photoData)).blob();
+    } else {
+      const data = validImage(item.mediaData || item.photoData);
+      if (data) blob = await (await fetch(data)).blob();
     }
-    if (!blob) throw new Error("Não foi possível carregar o arquivo.");
-    if (!card.isConnected || state.root?.hidden) return;
+    if (!blob) throw new Error("Não foi possível carregar a mídia.");
+    const currentIndex = Number(state.active?.dataset.reelsIndex);
+    const itemIndex = Number(card.dataset.reelsIndex);
+    if (!card.isConnected || !state.open || state.root?.hidden ||
+        !inMediaWindow(itemIndex, currentIndex, state.currentList.length)) return;
+    const old = state.urls.get(item.id);
+    if (old) URL.revokeObjectURL(old);
     const url = URL.createObjectURL(blob);
     state.urls.set(item.id, url);
     el.src = url;
     card.dataset.assetReady = "true";
-    if (el.tagName === "VIDEO" && state.active === card && !prefersReducedMotion() && document.visibilityState === "visible")
+    if (el.tagName === "VIDEO" && state.active === card &&
+        !prefersReducedMotion() && document.visibilityState === "visible")
       await el.play().catch(() => {});
   } catch {
-    if (card.isConnected) {
+    if (card.isConnected && !card.querySelector(".reels-media-error")) {
       const note = document.createElement("div");
       note.className = "reels-media-error";
-      note.textContent = "Não foi possível abrir esta mídia. Verifique as permissões de armazenamento.";
+      note.textContent = "A mídia não pôde ser carregada. Verifique a sincronização e tente novamente.";
       card.querySelector(".reels-media")?.append(note);
     }
   } finally {
@@ -111,13 +148,14 @@ function activate(card) {
   for (const video of state.root?.querySelectorAll(".reels-video") || []) video.pause();
   state.active = card;
   const index = Number(card.dataset.reelsIndex);
-  for (const offset of [-1,0,1]) {
+  releaseOutsideWindow(index);
+  for (const offset of [-1, 0, 1]) {
     const target = state.root?.querySelector('[data-reels-index="' + (index + offset) + '"]');
     const item = state.currentList[index + offset];
     if (target && item) void hydrateMedia(target, item);
   }
   const video = card.querySelector("video");
-  if (video && video.src && !prefersReducedMotion() && document.visibilityState === "visible")
+  if (video?.src && !prefersReducedMotion() && document.visibilityState === "visible")
     void video.play().catch(() => {});
 }
 function observeFeed() {
@@ -170,8 +208,11 @@ function render() {
   const oldIndex = state.active ? Number(state.active.dataset.reelsIndex || 0) : 0;
   clearMedia();
   state.root.innerHTML = '<div class="reels-frame">' + feedHtml() + '</div>' + composeHtml();
+  state.lastFeedVersion = reelViewVersion(state.currentList);
+  state.feed = state.root.querySelector("#reels-scroll");
+  if (state.feed && oldIndex > 0 && state.currentList[oldIndex])
+    state.feed.scrollTop = oldIndex * state.feed.clientHeight;
   observeFeed();
-  if (oldIndex > 0 && state.currentList[oldIndex]) state.feed.scrollTop = oldIndex * state.feed.clientHeight;
 }
 function userId() { return state.user?.id; }
 function open() {
@@ -366,7 +407,10 @@ export function mountReels(user, options = {}) {
   const update = () => {
     state.own = [...ownMap.values()];
     state.shared = [...sharedMap.values()];
-    if (state.open && state.screen === "feed") render();
+    if (state.open && state.screen === "feed") {
+      const next = reelViewVersion(uniqueFeed(state.own, state.shared, state.user?.id, state.selected));
+      if (next !== state.lastFeedVersion) render();
+    }
   };
   state.unsub.push(onSnapshot(query(coll, where("authorId", "==", user.id)),
     snapshot => { ownMap.clear(); snapshot.docs.forEach(d => ownMap.set(d.id, { ...d.data(), id: d.id })); update(); },
