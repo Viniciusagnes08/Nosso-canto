@@ -359,7 +359,7 @@ async function photos() {
           .slice(0, MAX_PHOTO_SELECTION);
         const preview = photos.slice(0, 100);
         document.querySelector("#connectionBody").innerHTML =
-          `<p>${photos.length} foto(s) selecionada(s). As cópias serão guardadas na sua conta do Nosso Canto.</p><ul>${preview.map((x) => `<li>${safe(x.mediaFile?.filename || "Foto")}</li>`).join("")}</ul>${photos.length > preview.length ? `<p class="form-hint">E mais ${photos.length - preview.length} foto(s).</p>` : ""}<button class="btn btn-primary" id="savePhotos" ${photos.length ? "" : "disabled"}>Guardar fotos selecionadas</button>`;
+          `<p>${photos.length} foto(s) selecionada(s). As cópias serão guardadas no seu perfil e aparecerão em Momentos → Minhas. Para compartilhar com seu amor, toque em Publicar na foto escolhida.</p><ul>${preview.map((x) => `<li>${safe(x.mediaFile?.filename || "Foto")}</li>`).join("")}</ul>${photos.length > preview.length ? `<p class="form-hint">E mais ${photos.length - preview.length} foto(s).</p>` : ""}<button class="btn btn-primary" id="savePhotos" ${photos.length ? "" : "disabled"}>Guardar fotos selecionadas</button>`;
         document.querySelector("#savePhotos").onclick = async (e) => {
           if (busy) return;
           busy = true;
