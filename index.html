@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="./assets/layout.css" />
     <link rel="stylesheet" href="./assets/account.css" />
     <link rel="stylesheet" href="./assets/mood.css" />
+    <link rel="stylesheet" href="./assets/reels.css" />
     <meta name="referrer" content="no-referrer" />
     <title>Entre N&oacute;s | Nosso cantinho</title>
   </head>
@@ -42,6 +43,7 @@
             >
           </a>
           <div class="sidebar-section-title">NOSSO ESPA&Ccedil;O</div>
+          <button type="button" class="reels-menu-entry" data-reels-open><span aria-hidden="true">✧</span> Momentos <small>Nosso Reels</small></button>
           <nav class="nav-links" aria-label="Secoes">
             <button class="nav-link active" data-nav="inicio">
               <span class="nav-icon" aria-hidden="true">&#8962;</span>
@@ -113,6 +115,7 @@
         </div>
       </div>
       <nav class="mobile-nav" aria-label="Navegacao movel">
+        <button class="mobile-tab" data-reels-open type="button"><span aria-hidden="true">▶</span>Reels</button>
         <button class="mobile-tab active" data-nav="inicio">
           <span>&#8962;</span>In&iacute;cio
         </button>
@@ -167,6 +170,7 @@
         </form>
       </dialog>
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
+      <section id="reelsRoot" hidden aria-label="Momentos e perfis pessoais"></section>
     </div>
     <script type="module" src="./assets/boot.js"></script>
   </body>
