@@ -67,11 +67,6 @@ export function connectionCards() {
       "Importe automaticamente os eventos das suas agendas.",
     ],
     [
-      "spotify",
-      "Spotify",
-      "Escolha suas favoritas e as músicas ouvidas recentemente.",
-    ],
-    [
       "youtube",
       "YouTube",
       "Importe playlists e vídeos salvos para o nosso cantinho.",
@@ -86,7 +81,7 @@ export function connectionCards() {
     })
     .join(
       "",
-    )}<p class="form-hint">Você escolhe o que importar de cada serviço. Depois de guardar, fotos, eventos e músicas aparecem automaticamente para vocês dois.</p></section>`;
+    )}<p class="form-hint">Você escolhe o que importar de cada serviço. Depois de guardar, fotos, eventos e vídeos aparecem automaticamente para vocês dois.</p><p class="form-hint">Spotify: adicione links de músicas na Nossa trilha.</p></section>`;
 }
 async function googleConnect(provider) {
   if (tokenFor(provider)) return;
