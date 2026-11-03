@@ -1,7 +1,8 @@
 import { getApp } from "@firebase/app";
-import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, getDoc, serverTimestamp } from "@firebase/firestore";
+import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, getDoc, getDocs, serverTimestamp } from "@firebase/firestore";
 import { mediaGet, mediaPut } from "./media.js";
 import { cleanProfile } from "./reels-model.js";
+import { selectUnpublishedLegacy, visibleSnapshotVersion } from "./core/sync-policy.js";
 
 const SPACE_ID = "nosso-canto";
 const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
@@ -34,8 +35,12 @@ async function serialize(record, userId) {
 }
 async function hydrate(raw, userId) {
   const record = { ...raw, owner: raw.authorId === userId ? "self" : "partner" };
-  if (record.photoId && record.photoData)
-    await mediaPut(record.photoId, await dataUrlToBlob(record.photoData));
+  if (record.photoId && record.photoData) {
+    // Photos from either member must be present locally to render across devices.
+    // Repeated Firestore listener notifications must not rewrite the same blob.
+    const alreadyCached = await mediaGet(record.photoId).catch(() => null);
+    if (!alreadyCached) await mediaPut(record.photoId, await dataUrlToBlob(record.photoData));
+  }
   delete record.photoData;
   delete record.updatedAt;
   return record;
@@ -48,15 +53,34 @@ export async function connectRecords(userId, initialRecords, receive, failure, i
   const storedProfile = await getDoc(profileRef);
   if (storedProfile.exists()) receiveProfile(cleanProfile(storedProfile.data()));
   else await setDoc(profileRef, { ...cleanProfile(initialProfile), authorId: userId, updatedAt: serverTimestamp() });
-  for (const record of initialRecords.filter((item) => !item.authorId || item.authorId === userId))
-    await setDoc(doc(records, record.id), await serialize(record, userId), { merge: true });
+  // Legacy import is create-only: a stale copy on this phone cannot clobber a
+  // fresher entry that another device already synchronized to Firestore.
+  // A single query is cheaper than one getDoc call per historical record.
+  if (initialRecords.length) {
+    const existing = await getDocs(query(records, where("authorId", "==", userId)));
+    const existingIds = new Set(existing.docs.map(entry => entry.id));
+    const seed = selectUnpublishedLegacy(initialRecords, existingIds, userId);
+    for (const record of seed)
+      await setDoc(doc(records, record.id), await serialize(record, userId));
+  }
   const own = new Map(), shared = new Map();
   let publishing = Promise.resolve();
+  let deliveredVersion = "";
   const publish = () => {
     const snapshot = [...new Map([...shared, ...own]).values()].filter(
       row => row.type !== "reel" && row.type !== "universe",
     );
-    publishing = publishing.then(async () => receive(await Promise.all(snapshot.map((row) => hydrate(row, userId))))).catch(failure);
+    const version = visibleSnapshotVersion(snapshot);
+    // Both onSnapshot subscriptions often return the same document list.
+    // Skip equivalent snapshots to avoid decoding dozens of photos twice.
+    if (version === deliveredVersion) return;
+    deliveredVersion = version;
+    publishing = publishing
+      .then(async () => receive(await Promise.all(snapshot.map(row => hydrate(row, userId)))))
+      .catch(error => {
+        deliveredVersion = "";
+        failure(error);
+      });
   };
   const listen = (filter, target) => onSnapshot(query(records, filter), (snapshot) => {
     target.clear();
