@@ -1,11 +1,10 @@
 import { auth } from "./auth.js";
 import { safe } from "./utils.js";
+import { TOPIC_BY_ID, topicsForProfile } from "./universe-topics.js";
 import { getApp } from "@firebase/app";
 import { getFirestore, collection, query, where, onSnapshot, doc, setDoc, deleteDoc, serverTimestamp } from "@firebase/firestore";
 
-const TOPICS = ["bts", "ballet"];
 const TYPES = ["news", "videos", "music", "quotes"];
-const TITLES = { bts: "BTS", ballet: "Ballet" };
 const KIND_TITLES = { news: "Notícias", videos: "Vídeos", music: "Músicas", quotes: "Frases" };
 const QUOTES = [
   { topic: "bts", title: "Existem melodias que se tornam lugares para voltar.", source: "Pensamento original" },
@@ -15,7 +14,8 @@ const QUOTES = [
 ];
 const state = {
   topic: "all", kind: "all", search: "", items: {}, errors: {}, busy: false,
-  favorites: new Map(), stop: null, user: null, open: false, initialized: false
+  favorites: new Map(), stop: null, stopProfile: null, user: null, open: false, initialized: false,
+  topics: [], pendingReload: false
 };
 let root;
 const text = (value) => safe(String(value == null ? "" : value));
@@ -45,7 +45,7 @@ function writeLocal() {
 function card(item, saved = false) {
   const isSaved = state.favorites.has(item.id);
   const target = validLink(item.url);
-  const topic = item.topic === "ballet" ? "Ballet" : "BTS";
+  const topic = TOPIC_BY_ID[item.topic]?.label || "Seu interesse";
   const category = KIND_TITLES[item.kind] || "Conteúdo";
   const photo = item.thumbnail && validLink(item.thumbnail) !== "#" ?
     '<div class="universe-card-image"><img loading="lazy" alt="" referrerpolicy="no-referrer" src="' + text(item.thumbnail) + '"></div>' : "";
@@ -59,10 +59,10 @@ function card(item, saved = false) {
     (isSaved ? '♥ Salvo' : '♡ Salvar') + '</button></div></div></article>';
 }
 function allItems() {
-  const collected = [...QUOTES.map((q, i) => ({
+  const collected = [...QUOTES.filter(q => state.topics.includes(q.topic)).map((q, i) => ({
     id: "quote:" + i, topic: q.topic, kind: "quotes", ...q, url: ""
   }))];
-  for (const topic of TOPICS) for (const kind of TYPES.slice(0, 3))
+  for (const topic of state.topics) for (const kind of TYPES.slice(0, 3))
     collected.push(...(state.items[topic + ":" + kind] || []));
   return collected;
 }
@@ -70,22 +70,45 @@ function visibleItems() {
   const base = state.kind === "saved" ? [...state.favorites.values()] : allItems();
   const term = state.search.trim().toLocaleLowerCase("pt-BR");
   return base.filter(item =>
+    state.topics.includes(item.topic) &&
     (state.topic === "all" || item.topic === state.topic) &&
     (state.kind === "all" || state.kind === "saved" || item.kind === state.kind) &&
     (!term || [item.title, item.source, item.subtitle].some(x => String(x || "").toLocaleLowerCase("pt-BR").includes(term)))
   ).sort((a, b) => (b.publishedAt || "").localeCompare(a.publishedAt || ""));
 }
+function renderTopics() {
+  if (!root) return;
+  const holder = root.querySelector(".universe-topic-pills");
+  if (holder) holder.innerHTML =
+    '<button type="button" data-universe-topic="all" aria-pressed="true">✧ Tudo</button>' +
+    state.topics.map(id => {
+      const topic = TOPIC_BY_ID[id];
+      return topic ? '<button type="button" data-universe-topic="' + text(id) + '" aria-pressed="false">' +
+        text(topic.icon) + ' ' + text(topic.label) + '</button>' : '';
+    }).join("");
+  const caption = root.querySelector("#universe-caption");
+  if (caption) caption.textContent = state.topics.length ?
+    state.topics.slice(0, 2).map(id => TOPIC_BY_ID[id]?.label).filter(Boolean).join(" & ") :
+    "um lugar só seu";
+}
 function renderCards() {
+  if (!root) return;
   const output = root.querySelector("#universe-results");
   if (!output) return;
   const entries = visibleItems();
-  output.innerHTML = entries.length ?
-    '<div class="universe-grid">' + entries.map(x => card(x)).join("") + '</div>' :
-    '<div class="universe-empty"><span aria-hidden="true">✧</span><h3>Nenhum conteúdo por aqui ainda.</h3><p>Experimente outra categoria ou volte mais tarde.</p></div>';
+  output.innerHTML = !state.topics.length ?
+    '<div class="universe-empty"><span aria-hidden="true">✧</span><h3>O que inspira você?</h3>' +
+      '<p>Escolha seus assuntos preferidos no Meu cantinho. Este feed é exclusivo do seu perfil.</p>' +
+      '<button type="button" data-universe-settings class="universe-configure-button">Escolher meus temas</button></div>' :
+    entries.length ?
+      '<div class="universe-grid">' + entries.map(x => card(x)).join("") + '</div>' :
+      '<div class="universe-empty"><span aria-hidden="true">✧</span><h3>Suas descobertas estão a caminho.</h3>' +
+      '<p>Experimente outra categoria ou atualize novamente.</p></div>';
   root.querySelector("#universe-count").textContent = entries.length + (entries.length === 1 ? " descoberta" : " descobertas");
-  root.querySelector("#universe-status").textContent = state.busy ? "Atualizando fontes…" :
+  root.querySelector("#universe-status").textContent = !state.topics.length ?
+    "Escolha assuntos em Meu cantinho" : state.busy ? "Atualizando fontes…" :
     Object.keys(state.errors).length ? "Algumas fontes estão indisponíveis. Os outros conteúdos continuam acessíveis." :
-    "Fontes públicas e oficiais • atualizações automáticas";
+    "Recomendações do seu perfil • fontes públicas";
   root.querySelectorAll("[data-universe-topic]").forEach(node =>
     node.setAttribute("aria-pressed", String(node.dataset.universeTopic === state.topic)));
   root.querySelectorAll("[data-universe-kind]").forEach(node =>
@@ -103,14 +126,12 @@ function initialView() {
   root.innerHTML = '<div class="universe-shell">' +
     '<div class="universe-topline"><span>ENTRE NÓS  /  MEU UNIVERSO</span><span class="universe-star">✦</span></div>' +
     '<header class="universe-hero"><div class="universe-hero-content"><span class="universe-eyebrow">UM LUGAR PARA TUDO O QUE TE INSPIRA</span>' +
-    '<h1>Seu universo,<br><em>seu jeito.</em></h1><p>Entre melodias, movimentos e histórias, encontre um pouquinho de tudo o que faz seus olhos brilharem.</p>' +
+    '<h1>Seu universo,<br><em>seu jeito.</em></h1><p>Descubra notícias, músicas e histórias sobre os assuntos que você escolher. Este espaço pertence ao seu perfil.</p>' +
     '<div class="universe-hero-decor" aria-hidden="true">✧  ♡  ✧</div></div>' +
-    '<div class="universe-art" aria-hidden="true"><span class="universe-art-circle"></span><span class="universe-art-note">♪</span><span class="universe-art-flower">✿</span><span class="universe-art-caption">bts & ballet</span></div></header>' +
-    '<section class="universe-controls"><div class="universe-control-heading"><div><span class="universe-eyebrow">SUAS DESCOBERTAS</span><h2>Escolha seu mundo</h2></div><button type="button" id="universe-refresh">↻ Atualizar</button></div>' +
+    '<div class="universe-art" aria-hidden="true"><span class="universe-art-circle"></span><span class="universe-art-note">♪</span><span class="universe-art-flower">✿</span><span id="universe-caption" class="universe-art-caption">um lugar só seu</span></div></header>' +
+    '<section class="universe-controls"><div class="universe-control-heading"><div><span class="universe-eyebrow">SUAS DESCOBERTAS</span><h2>Suas descobertas</h2></div><div class="universe-heading-actions"><button type="button" data-universe-settings>Editar meus temas</button><button type="button" id="universe-refresh">↻ Atualizar</button></div></div>' +
     '<div class="universe-topic-pills" role="group" aria-label="Interesses">' +
-    '<button data-universe-topic="all" aria-pressed="true">✧ Tudo</button>' +
-    '<button data-universe-topic="bts" aria-pressed="false">♫ BTS</button>' +
-    '<button data-universe-topic="ballet" aria-pressed="false">✿ Ballet</button></div>' +
+    '<button data-universe-topic="all" aria-pressed="true">✧ Tudo</button></div>' +
     '<div class="universe-toolbar"><div class="universe-kind-pills" role="group" aria-label="Tipo de conteúdo">' +
     '<button data-universe-kind="all" aria-pressed="true">Para você</button>' +
     '<button data-universe-kind="news" aria-pressed="false">Notícias</button>' +
@@ -127,6 +148,7 @@ function initialView() {
     state.search = e.target.value;
     renderCards();
   });
+  renderTopics();
   renderCards();
 }
 async function connectFavorites() {
