@@ -6,6 +6,7 @@
   "description": "Um espaço local para cultivar a presença a dois.",
   "scripts": {
     "test": "node test-smoke.cjs && node --test tests/*.test.mjs",
+    "start": "node server/index.mjs",
     "dev": "npm run build && python -m http.server 8766 --directory dist",
     "format": "npx --yes prettier@3.6.2 --write assets/*.js assets/*.css index.html sw.js test-smoke.cjs",
     "build": "node scripts/build.mjs"
@@ -15,7 +16,8 @@
     "@firebase/auth": "1.13.9",
     "@firebase/firestore": "4.19.1",
     "@firebase/storage": "0.14.6",
-    "@supabase/supabase-js": "2.118.0"
+    "@supabase/supabase-js": "2.118.0",
+    "jose": "6.1.2"
   },
   "devDependencies": {
     "esbuild": "0.28.2",
@@ -25,5 +27,6 @@
     "@grpc/grpc-js": "1.13.6"
   }
 }
+
 
 
