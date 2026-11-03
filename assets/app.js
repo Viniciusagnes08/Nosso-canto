@@ -69,8 +69,8 @@ function persist() {
   }
 }
 async function addRecord(record) {
-  // All new couple content is automatically shared; old private records are left intact.
-  record.shared = true;
+  // Calendar and music stay personal until their author explicitly shares them.
+  record.shared = ["event", "music"].includes(record.type) ? record.shared === true : true;
   if (!localOnly && !cloudSync)
     throw new Error("A nuvem ainda não está conectada. Aguarde e tente novamente.");
   if (!localOnly && !navigator.onLine)
@@ -86,6 +86,26 @@ async function addRecord(record) {
       persist();
       throw new Error("Não foi possível confirmar o salvamento na nuvem. Tente novamente.");
     }
+  }
+}
+async function toggleRecordSharing(id) {
+  const record = data.entries.find((item) => item.id === id && item.owner !== "partner" && ["event", "music"].includes(item.type));
+  if (!record) return;
+  const previous = record.shared === true;
+  const selectedBefore = record.sharingSelected;
+  record.shared = !previous;
+  record.sharingSelected = true;
+  try {
+    if (!localOnly && !cloudSync) throw new Error("A nuvem ainda não está conectada.");
+    if (!localOnly && !navigator.onLine) throw new Error("Você está sem internet.");
+    if (cloudSync) await cloudSync.save(record);
+    persist();
+    render();
+    toast(record.shared ? "Item compartilhado com seu amor." : "Item agora é privado.");
+  } catch (error) {
+    record.shared = previous;
+    record.sharingSelected = selectedBefore;
+    toast(error.message || "Não foi possível alterar o compartilhamento.");
   }
 }
 function ownItems(type) {
@@ -209,7 +229,7 @@ function formatEntry(e, showPhoto = true) {
   const title = e.type === "memory" ? visibleMediaCaption(e) :
     e.title || (mood ? "Me senti " + mood.name.toLowerCase() : t.label);
   const note = e.note || e.description || "";
-  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body">${title ? `<strong>${safe(title)}</strong>` : ""} ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto do registro" data-photo="${safe(e.photoId)}">` : ""}</div>${e.owner !== "partner" ? `<div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div>` : ""}</article>`;
+  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body">${title ? `<strong>${safe(title)}</strong>` : ""} ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto do registro" data-photo="${safe(e.photoId)}">` : ""}</div>${e.owner !== "partner" ? `<div class="timeline-actions">${["event","music"].includes(e.type) ? `<button class="btn btn-small btn-soft" data-toggle-share="${safe(e.id)}">${e.shared === true ? "Deixar privado" : "Compartilhar"}</button>` : ""}<button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div>` : ""}</article>`;
 }
 function validUrl(url) {
   try {
@@ -368,8 +388,8 @@ function renderCalendar() {
     );
   }
   const chosen = calendarItems(selectedDay);
-  return `${intro("TEMPO COMPARTILHADO", "Nosso calend\u00e1rio", "Organizem encontros, chamadas e compromissos. Nesta prévia, os registros ficam neste navegador.", '<button class="btn btn-primary" data-open="event">+ Adicionar evento</button>')}
- <div class="calendar-shell"><section class="paper-card"><div class="calendar-top"><h3>${first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3><div><button data-today>Hoje</button> <button data-calendar="prev" aria-label="M\u00eas anterior">\u2190</button> <button data-calendar="next" aria-label="Pr\u00f3ximo m\u00eas">\u2192</button></div></div><div class="cal-grid">${["Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b", "Dom"].map((x) => `<span class="cal-label">${x}</span>`).join("")}${cells.join("")}</div><p class="mood-note">Os pontinhos mostram registros feitos em cada dia.</p></section><div class="stack"><section class="paper-card"><span class="eyebrow">O DIA ESCOLHIDO</span><h3 class="cal-side-date">${displayDate(selectedDay, { weekday: "long", day: "numeric", month: "long" })}</h3>${chosen.length ? `<div class="timeline-list">${chosen.map((e) => formatEntry(e, false)).join("")}</div>` : empty("\u2727", "Um dia para escrever", "Esse dia ainda n\u00e3o tem lembran\u00e7as.", '<button class="btn btn-soft" data-open="event">Adicionar ao dia</button>')}</section><div class="notice">Importe eventos escolhidos em Meu cantinho → Suas conexões. As cópias importadas não acompanham alterações posteriores no Google Agenda.</div></div></div>`;
+  return `${intro("TEMPO COMPARTILHADO", "Nosso calend\u00e1rio", "Seus eventos ficam privados até você escolher compartilhar cada um.", '<button class="btn btn-primary" data-open="event">+ Adicionar evento</button>')}
+ <div class="calendar-shell"><section class="paper-card"><div class="calendar-top"><h3>${first.toLocaleDateString("pt-BR", { month: "long", year: "numeric" })}</h3><div><button data-today>Hoje</button> <button data-calendar="prev" aria-label="M\u00eas anterior">\u2190</button> <button data-calendar="next" aria-label="Pr\u00f3ximo m\u00eas">\u2192</button></div></div><div class="cal-grid">${["Seg", "Ter", "Qua", "Qui", "Sex", "S\u00e1b", "Dom"].map((x) => `<span class="cal-label">${x}</span>`).join("")}${cells.join("")}</div><p class="mood-note">Os pontinhos mostram registros feitos em cada dia.</p></section><div class="stack"><section class="paper-card"><span class="eyebrow">O DIA ESCOLHIDO</span><h3 class="cal-side-date">${displayDate(selectedDay, { weekday: "long", day: "numeric", month: "long" })}</h3>${chosen.length ? `<div class="timeline-list">${chosen.map((e) => formatEntry(e, false)).join("")}</div>` : empty("\u2727", "Um dia para escrever", "Esse dia ainda n\u00e3o tem lembran\u00e7as.", '<button class="btn btn-soft" data-open="event">Adicionar ao dia</button>')}</section><div class="notice">Conecte sua agenda em Meu cantinho → Suas conexões. Os eventos importados ficam privados até você compartilhar cada um.</div></div></div>`;
 }
 function challengeCard(e) {
   const proofs = ownItems("proof").filter((p) => p.challengeId === e.id),
@@ -415,11 +435,11 @@ function renderMusicCard(entry) {
   const inApp = spotifyEmbedUrl(entry.url);
   return `<article class="music-card music-card-interactive">
     <div class="nc-mini-record" aria-hidden="true"><span>♡</span></div>
-    <div class="music-card-info"><strong>${safe(entry.title)}</strong><small>${safe(entry.artist || "Escolhida com carinho")}</small></div>
+    <div class="music-card-info"><strong>${safe(entry.title)}</strong><small>${safe(entry.artist || "Escolhida com carinho")} · ${entry.shared === true ? "Compartilhada" : "Privada"}</small></div>
     <div class="music-card-actions">
       ${inApp ? `<button type="button" class="btn btn-small btn-soft" data-music-play="${safe(entry.url)}" data-music-title="${safe(entry.title)}" aria-label="Ouvir ${safe(entry.title)} no player oficial do Spotify">Ouvir aqui</button>` : ""}
       ${entry.url ? `<a class="music-link" href="${safe(validUrl(entry.url))}" target="_blank" rel="noopener noreferrer">Abrir ↗</a>` : ""}
-      ${entry.owner !== "partner" ? `<button class="mini-action" data-delete="${safe(entry.id)}" aria-label="Apagar música">×</button>` : ""}
+      ${entry.owner !== "partner" ? `<button class="btn btn-small btn-soft" data-toggle-share="${safe(entry.id)}">${entry.shared === true ? "Deixar privada" : "Compartilhar"}</button><button class="mini-action" data-delete="${safe(entry.id)}" aria-label="Apagar música">×</button>` : ""}
     </div>
   </article>`;
 }
@@ -478,7 +498,7 @@ function renderPersonalProfileFields() {
 }
 function renderSettings() {
   if (localOnly) return renderLocalSettings();
-  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Meu perfil", "Seu perfil é individual; o conteúdo registrado no espaço do casal é compartilhado.")}<p class="setting-note">Nome, foto, descrição e interesses ficam no seu perfil. Fotos, calendário, humor e outros registros que você adicionar serão compartilhados automaticamente com seu amor.</p><p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm">${renderAvatarEditor()}<div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div>${renderPersonalProfileFields()}<button class="btn btn-primary">Salvar meu perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "A nuvem mantém os dois celulares atualizados.")}<p class="setting-note">O backup é uma cópia extra das fotos e anotações que esta conta consegue visualizar. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Ao entrar pela primeira vez, os registros já associados a esta conta neste navegador são migrados para a nuvem, preservando a escolha entre compartilhado e privado.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar meus registros da nuvem</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você selecionar no provedor. Fotos, eventos e músicas importados são compartilhados automaticamente com vocês dois.</p><p class="setting-note">Novos registros aparecem automaticamente nos dois perfis. Registros antigos marcados como privados continuam privados até uma migração específica; Meu Universo e preferências pessoais são individuais.</p><p class="setting-note">Sair da conta não apaga o que já foi guardado na nuvem.</p></section></div>`;
+  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Meu perfil", "Seu perfil é individual; o conteúdo registrado no espaço do casal é compartilhado.")}<p class="setting-note">Nome, foto, descrição e interesses ficam no seu perfil. Fotos e registros afetivos são compartilhados. Eventos e músicas ficam privados até você escolher compartilhar cada item.</p><p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm">${renderAvatarEditor()}<div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div>${renderPersonalProfileFields()}<button class="btn btn-primary">Salvar meu perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "A nuvem mantém os dois celulares atualizados.")}<p class="setting-note">O backup é uma cópia extra das fotos e anotações que esta conta consegue visualizar. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Ao entrar pela primeira vez, os registros já associados a esta conta neste navegador são migrados para a nuvem, preservando a escolha entre compartilhado e privado.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar meus registros da nuvem</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões guardam conteúdo da sua conta. Eventos e músicas importados ficam privados até você compartilhar cada item.</p><p class="setting-note">Os registros compartilhados aparecem nos dois perfis. Eventos, músicas, Meu Universo e preferências pessoais podem permanecer individuais.</p><p class="setting-note">Sair da conta não apaga o que já foi guardado na nuvem.</p></section></div>`;
 }
 
 function render() {
@@ -512,6 +532,8 @@ const uploadField = (required = false) =>
   `<div class="field"><label for="f-photo">Uma foto ${required ? "para comprovar o desafio" : "(opcional)"}</label><div class="upload-zone">Uma imagem de at\u00e9 16 MB. A foto aparecerá automaticamente nos dois celulares.<input id="f-photo" name="photo" type="file" accept="image/*" ${required ? "required" : ""}></div></div>`;
 const shareField = () =>
   `<p class="form-hint">Este registro será compartilhado automaticamente com seu amor.</p>`;
+const optionalShareField = () =>
+  `<label class="toggle-label"><input type="checkbox" name="shared" value="true"> Compartilhar com meu amor agora</label><p class="form-hint">Se não marcar, só você verá este item. Poderá compartilhá-lo depois.</p>`;
 function openModal(type, meta) {
   dialogType = type;
   dialogMeta = meta || null;
@@ -547,7 +569,7 @@ function openModal(type, meta) {
         dateField() +
         `<div class="field"><label for="f-time">Horário (opcional)</label><input id="f-time" name="time" type="time"></div>` +
         noteField("Um detalhe ou lembrete") +
-        shareField(true);
+        optionalShareField();
       break;
     case "message":
       title = "Um recadinho de carinho";
@@ -573,7 +595,7 @@ function openModal(type, meta) {
         `<div class="field"><label for="f-url">Link para ouvir (opcional)</label><input id="f-url" type="url" name="url" placeholder="https://open.spotify.com/..."></div>` +
         noteField("Por que essa m\u00fasica importa?") +
         dateField() +
-        shareField(true);
+        optionalShareField();
       break;
     case "memory":
       title = "Guardar uma lembran\u00e7a";
@@ -650,7 +672,8 @@ async function saveModal(e) {
       note: String(form.get("note") || "")
         .trim()
         .slice(0, 1500),
-      shared: true,
+      shared: ["event", "music"].includes(type) ? form.has("shared") : true,
+      ...(["event", "music"].includes(type) && form.has("shared") ? { sharingSelected: true } : {}),
     };
     if (type === "mood") {
       if (!MOODS.some((m) => m.id === moodChoice))
@@ -978,6 +1001,13 @@ window.addEventListener("click", async (e) => {
     removeItem(del.dataset.delete);
     return;
   }
+  const share = e.target.closest("[data-toggle-share]");
+  if (share) {
+    share.disabled = true;
+    await toggleRecordSharing(share.dataset.toggleShare);
+    share.disabled = false;
+    return;
+  }
   const f = e.target.closest("[data-filter]");
   if (f) {
     filter = f.dataset.filter;
@@ -1189,7 +1219,7 @@ export async function startApp(user, options = {}) {
           id: uid(),
           owner: "self",
           created: new Date().toISOString(),
-          shared: true,
+          shared: ["event", "music"].includes(input.type) ? false : true,
         };
         if (blob) {
           record.photoId = uid();
