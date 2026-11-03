@@ -11,6 +11,7 @@ const config = Object.fromEntries(
     "GOOGLE_CLIENT_ID",
     "SPOTIFY_CLIENT_ID",
     "GOOGLE_LOGIN_ENABLED",
+    "FIREBASE_STORAGE_BUCKET",
   ].map((key) => [key, process.env[key] || (key === "AUTH_PROVIDER" ? "firebase" : "")]),
 );
 await build({
@@ -35,6 +36,7 @@ for (const file of [
   "layout.css",
   "account.css",
   "mood.css",
+  "reels.css",
   "icon.svg",
 ])
   await cp("assets/" + file, new URL("assets/" + file, output));
