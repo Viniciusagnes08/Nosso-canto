@@ -4,6 +4,7 @@ import { safe, uid, localDay, displayDate, dateTime } from "./utils.js";
 import { MOODS, LEGACY_MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
 import { moodChoices, moodPortrait } from "./mood-view.js";
 import { connectRecords } from "./cloud-records.js";
+import { mountReels } from "./reels.js";
 import {
   mediaPut,
   mediaGet,
@@ -1002,6 +1003,7 @@ document.addEventListener("submit", async (e) => {
     const form = new FormData(e.target);
     const previous = { ...data.profile };
     const profile = {
+      ...previous,
       self: String(form.get("self") || "Voc\u00ea")
         .trim()
         .slice(0, 40),
@@ -1164,6 +1166,6 @@ export async function startApp(user, options = {}) {
       }
     }
   });
+  if (!localOnly) mountReels(user);
   navigate(tab);
 }
-
