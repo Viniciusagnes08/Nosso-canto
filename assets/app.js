@@ -128,13 +128,6 @@ function announce() {
   $("#miniName").textContent = data.profile.self;
   $("#miniAvatar").textContent = initial(data.profile.self);
   $("#topAvatar").textContent = initial(data.profile.self);
-  $("#modeBanner").innerHTML = localOnly
-    ? '<span><strong>Modo local ativo:</strong> registros guardados somente neste dispositivo. Não há conta nem sincronização entre vocês.</span><button class="text-link" data-nav="ajustes">Entender</button>'
-    : cloudStatus === "online"
-      ? '<span><strong>Sincronizado:</strong> alterações compartilhadas aparecem nos dois celulares automaticamente.</span><button class="text-link" data-nav="ajustes">Privacidade</button>'
-      : cloudStatus === "error"
-        ? '<span><strong>Sincronização interrompida:</strong> confira a conexão antes de fazer novas alterações.</span><button class="text-link" data-nav="ajustes">Ver detalhes</button>'
-        : '<span><strong>Conectando:</strong> preparando o espaço compartilhado de vocês…</span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
 }
 function navigate(next) {
   if (
@@ -159,7 +152,7 @@ function navigate(next) {
     else b.removeAttribute("aria-current");
   });
   const moreToggle = document.querySelector(".mobile-more-toggle");
-  moreToggle?.classList.toggle("active", ["humor", "desafios", "musicas", "ajustes"].includes(tab));
+  moreToggle?.classList.toggle("active", ["humor", "desafios", "memorias", "musicas", "ajustes"].includes(tab));
   location.hash = next;
   render();
   $("#app").focus({ preventScroll: true });
@@ -941,26 +934,12 @@ async function showAdvice() {
   }
 }
 window.addEventListener("click", async (e) => {
-  const moreToggle = e.target.closest(".mobile-more-toggle");
-  const moreMenu = document.querySelector("#mobileMore");
-  if (moreToggle) {
-    moreMenu.hidden = !moreMenu.hidden;
-    moreToggle.setAttribute("aria-expanded", String(!moreMenu.hidden));
-    return;
-  }
-  if (moreMenu && !moreMenu.hidden && !e.target.closest("#mobileMore")) {
-    moreMenu.hidden = true;
-    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
-  }
-  if (moreMenu && e.target.closest("#mobileMore button")) {
-    moreMenu.hidden = true;
-    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
-  }
+  const more = document.querySelector(".mobile-more-shell");
+  if (more?.open && (e.target.closest("#mobileMore button") || !e.target.closest(".mobile-more-shell"))) more.open = false;
   const nav = e.target.closest("[data-nav]");
   if (nav) {
     e.preventDefault();
-    if (moreMenu) moreMenu.hidden = true;
-    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
+    if (more) more.open = false;
     navigate(nav.dataset.nav);
     return;
   }
@@ -1072,10 +1051,9 @@ window.addEventListener("click", async (e) => {
 });
 window.addEventListener("keydown", (e) => {
   if (e.key !== "Escape") return;
-  const menu = document.querySelector("#mobileMore");
-  if (menu && !menu.hidden) {
-    menu.hidden = true;
-    document.querySelector(".mobile-more-toggle")?.setAttribute("aria-expanded", "false");
+  const menu = document.querySelector(".mobile-more-shell");
+  if (menu?.open) {
+    menu.open = false;
     document.querySelector(".mobile-more-toggle")?.focus();
   }
 });
