@@ -84,3 +84,7 @@ body.reels-active { overflow:hidden; }
 @media(max-width:480px){.reels-topbar{height:56px;flex-basis:56px;padding:5px 14px;}.reels-topbar button{font-size:12px;}.reels-topbar button:first-child span{display:none;}.reels-logo{font-size:18px;}.reels-navline{flex-basis:54px;padding:3px 13px;}.reels-navline button{padding:9px 12px;font-size:12px;}.reels-caption{padding-left:19px;padding-right:80px;padding-bottom:26px;}.reels-caption p{font-size:19px;}.reels-actions{right:9px;bottom:24px;gap:7px;}.reels-actions button{min-width:56px;min-height:49px;}.reels-actions button span{font-size:23px;}.reels-counter{left:14px;}.reels-type{right:13px;font-size:10px;}.reels-bottom{height:43px;flex-basis:43px;padding:0 13px;}.reels-bottom button,.reels-bottom span{font-size:10px;}.reels-compose form{padding:20px;gap:12px;}.reels-compose h2{font-size:36px;}.reels-profile-scroll{height:calc(100dvh - 56px);}}
 @media(prefers-reduced-motion:reduce){#reelsRoot *{transition:none!important;animation:none!important;scroll-behavior:auto!important;}}
 
+
+/* The Reels feed deliberately has no second profile screen or sticky bottom utility bar. */
+.reels-topbar-end{display:block;width:65px;flex:0 0 65px;}
+.reels-sharing-note{font-size:12px;line-height:1.6;background:#f4e4ee;color:#76576d;border:1px solid #e7cedd;border-radius:12px;padding:12px;}
