@@ -1,3 +1,4 @@
+import { topicsForProfile } from "./universe-topics.js";
 export const SPACE_ID = "nosso-canto";
 export const MEDIA_LIMITS = Object.freeze({
   photo: 12 * 1024 * 1024,
@@ -30,7 +31,8 @@ export function cleanProfile(input = {}) {
     bio: normalized("bio", 240),
     interests: normalized("interests", 160),
     favoriteMusic: normalized("favoriteMusic", 100),
-    avatarData
+    avatarData,
+    universeTopics: topicsForProfile(input)
   };
 }
 export function isReelItem(doc) {
