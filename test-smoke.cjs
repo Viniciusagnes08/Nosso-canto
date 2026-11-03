@@ -229,9 +229,9 @@ assert(
     (e) =>
       e.mood === "ansioso" &&
       e.note === "Estou com o coração acelerado" &&
-      e.shared === false,
+      e.shared === true,
   ),
-  "inline mood form persists private journal entry",
+  "inline mood form automatically shares new records",
 );
 context.FormData = nativeFormData;
 const illustrations = [
