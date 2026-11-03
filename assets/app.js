@@ -5,6 +5,8 @@ import { MOODS, LEGACY_MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
 import { moodChoices, moodPortrait } from "./mood-view.js";
 import { connectRecords } from "./cloud-records.js";
 import { mountReels } from "./reels.js";
+import { TOPIC_CATALOG, topicsForProfile } from "./universe-topics.js";
+import { profileImageToDataUrl } from "./profile-image.js";
 import {
   mediaPut,
   mediaGet,
@@ -64,6 +66,8 @@ function persist() {
   }
 }
 async function addRecord(record) {
+  // All new couple content is automatically shared; old private records are left intact.
+  record.shared = true;
   if (!localOnly && !cloudSync)
     throw new Error("A nuvem ainda não está conectada. Aguarde e tente novamente.");
   if (!localOnly && !navigator.onLine)
@@ -276,7 +280,7 @@ function renderMoodScreen() {
   return `${intro("NOSSO HUMOR DO DIA", "Como está seu coração hoje?", "Escolha a figurinha de gatinho que mais combina com você agora. Você pode contar um pouquinho sobre o seu dia, se quiser.")}
   <section class="cat-mood-page" aria-label="Registro de humor">
     <div class="cat-mood-top">
-      <div><span class="eyebrow">PEQUENOS SENTIMENTOS, GRANDES HISTÓRIAS</span><h2>Um gatinho para cada sentimento.</h2><p>Todo humor merece acolhimento. Escolha sem pressa e registre apenas aquilo que quiser compartilhar.</p></div>
+      <div><span class="eyebrow">PEQUENOS SENTIMENTOS, GRANDES HISTÓRIAS</span><h2>Um gatinho para cada sentimento.</h2><p>Todo humor merece acolhimento. O registro será compartilhado com seu amor.</p></div>
       <span class="cat-mood-top-note">♡ Um carinho por dia</span>
     </div>
     <div class="cat-mood-layout">
@@ -290,10 +294,7 @@ function renderMoodScreen() {
           <textarea id="moodNote" name="note" rows="3" maxlength="1500" placeholder="O que fez você se sentir assim?"></textarea>
           <label for="moodDate">Dia do registro</label>
           <input type="date" id="moodDate" name="date" value="${localDay()}" required>
-          <label class="cat-mood-toggle" for="moodShared">
-            <input type="checkbox" id="moodShared" name="shared">
-            Compartilhar com meu amor
-          </label>
+          <p class="setting-note">Seu registro será compartilhado automaticamente com seu amor.</p>
           <button type="submit" class="cat-mood-save" id="inlineSaveMood" ${current ? "" : "disabled"}>Salvar meu humor ♡</button>
           <p id="moodInlineFeedback" class="cat-mood-feedback" role="status" aria-live="polite"></p>
           <div class="cat-mood-latest">
@@ -459,9 +460,9 @@ const noteField = (label = "Quer contar mais?") =>
 const dateField = () =>
   `<div class="field"><label for="f-date">Quando?</label><input id="f-date" type="date" name="date" value="${safe(tab === "calendario" ? selectedDay : localDay())}" required></div>`;
 const uploadField = (required = false) =>
-  `<div class="field"><label for="f-photo">Uma foto ${required ? "para comprovar o desafio" : "(opcional)"}</label><div class="upload-zone">Uma imagem de at\u00e9 16 MB. Se o registro for compartilhado, ela aparecerá nos dois celulares.<input id="f-photo" name="photo" type="file" accept="image/*" ${required ? "required" : ""}></div></div>`;
-const shareField = (checked = true) =>
-  `<label class="toggle-label"><input type="checkbox" name="shared" ${checked ? "checked" : ""}> Compartilhar este registro com meu amor</label>`;
+  `<div class="field"><label for="f-photo">Uma foto ${required ? "para comprovar o desafio" : "(opcional)"}</label><div class="upload-zone">Uma imagem de at\u00e9 16 MB. A foto aparecerá automaticamente nos dois celulares.<input id="f-photo" name="photo" type="file" accept="image/*" ${required ? "required" : ""}></div></div>`;
+const shareField = () =>
+  `<p class="form-hint">Este registro será compartilhado automaticamente com seu amor.</p>`;
 function openModal(type, meta) {
   dialogType = type;
   dialogMeta = meta || null;
@@ -471,7 +472,7 @@ function openModal(type, meta) {
   switch (type) {
     case "mood":
       title = "Como est\u00e1 seu cora\u00e7\u00e3o?";
-      fields = `<p class="setting-note">Escolha o que est\u00e1 sentindo. O registro pode ficar s\u00f3 para voc\u00ea.</p>${moodChoices(moodChoice, "modal")}${noteField("O que fez voc\u00ea se sentir assim?")}${dateField()}${shareField(false)}`;
+      fields = `<p class="setting-note">Escolha o que est\u00e1 sentindo. O registro será compartilhado automaticamente com seu amor.</p>${moodChoices(moodChoice, "modal")}${noteField("O que fez voc\u00ea se sentir assim?")}${dateField()}${shareField(false)}`;
       break;
     case "meal":
       title = "O que voc\u00ea comeu?";
@@ -599,7 +600,7 @@ async function saveModal(e) {
       note: String(form.get("note") || "")
         .trim()
         .slice(0, 1500),
-      shared: form.has("shared"),
+      shared: true,
     };
     if (type === "mood") {
       if (!MOODS.some((m) => m.id === moodChoice))
@@ -686,7 +687,7 @@ async function saveInlineMood(e) {
       note: String(form.get("note") || "")
         .trim()
         .slice(0, 1500),
-      shared: form.has("shared"),
+      shared: true,
     });
     moodChoice = "";
     render();
@@ -1117,7 +1118,7 @@ export async function startApp(user, options = {}) {
           id: uid(),
           owner: "self",
           created: new Date().toISOString(),
-          shared: false,
+          shared: true,
         };
         if (blob) {
           record.photoId = uid();
