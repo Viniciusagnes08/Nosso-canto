@@ -1,0 +1,205 @@
+/* Nosso Canto 2.0 — experiências afetivas progressivas.
+ * Não altera a hierarquia global: acrescenta interação a módulos existentes.
+ * Sem GL/WebGL, sem JS de terceiros, sem autoplay de áudio.
+ */
+:root {
+  --nc2-ink: #382a39;
+  --nc2-ink-soft: #655266;
+  --nc2-rose: #e6baca;
+  --nc2-plum: #684868;
+  --nc2-paper: #fffaf7;
+  --nc2-line: #e7d8e0;
+  --nc2-focus: #7555a1;
+  --nc2-ease: cubic-bezier(.2, .7, .2, 1);
+  --nc2-fast: 160ms;
+  --nc2-normal: 240ms;
+}
+.memory-tile {
+  overflow: visible;
+  background: transparent;
+  perspective: 900px;
+}
+.memory-preview {
+  width: 100%;
+  height: 100%;
+  padding: 0;
+  border: 0;
+  display: block;
+  position: relative;
+  cursor: zoom-in;
+  border-radius: 16px;
+  overflow: hidden;
+  background: #efdee3;
+  box-shadow: 0 6px 18px rgb(73 40 63 / 9%);
+  transform: perspective(900px) rotateX(var(--nc-tilt-x, 0deg)) rotateY(var(--nc-tilt-y, 0deg));
+  transition: transform var(--nc2-normal) var(--nc2-ease), box-shadow var(--nc2-normal);
+}
+.memory-preview img {
+  object-fit: cover;
+  width: 100%;
+  height: 100%;
+}
+.memory-preview .photo-caption { pointer-events: none; text-align: left; }
+.memory-preview:focus-visible {
+  outline: 3px solid var(--nc2-focus);
+  outline-offset: 3px;
+  z-index: 3;
+}
+.memory-tile:focus-within { z-index: 2; }
+.memory-tile .photo-delete {
+  width: 44px;
+  height: 44px;
+  z-index: 4;
+  right: 6px;
+  top: 6px;
+}
+@media (hover:hover) and (pointer:fine) {
+  .memory-preview:hover {
+    box-shadow: 0 19px 32px rgb(70 37 56 / 22%);
+    scale: 1.02;
+  }
+}
+body.nc-gallery-open,
+body.nc-music-open { overflow: hidden; }
+.nc-gallery-dialog,
+.nc-music-dialog {
+  border: 1px solid #6d556f;
+  border-radius: 22px;
+  padding: 0;
+  margin: auto;
+  color: #fff8fa;
+  background: #241925;
+  box-shadow: 0 25px 95px rgb(16 7 18 / 70%);
+  max-width: 96vw;
+  max-height: 96dvh;
+}
+.nc-gallery-dialog { width: min(970px, 96vw); }
+.nc-gallery-dialog::backdrop,
+.nc-music-dialog::backdrop {
+  background: rgb(22 10 25 / 86%);
+  backdrop-filter: blur(8px);
+}
+.nc-gallery-panel { display: flex; flex-direction: column; max-height: 96dvh; }
+.nc-gallery-header, .nc-music-header {
+  display:flex; justify-content:space-between; align-items:center; gap:20px;
+  padding: 19px clamp(16px, 3vw, 28px);
+  border-bottom: 1px solid rgb(255 255 255 / 13%);
+}
+.nc-gallery-header h2, .nc-music-header h2 {
+  font: normal clamp(19px, 2.5vw, 27px)/1.16 Georgia,serif;
+  margin: 4px 0 0;
+  color: #fff6f9;
+}
+.nc-gallery-eyebrow {
+  font: 700 10px/1.4 "Trebuchet MS",sans-serif;
+  letter-spacing: .17em;
+  color: #e4bdcf;
+}
+.nc-gallery-close, .nc-gallery-arrow, .nc-gallery-tools button {
+  border: 1px solid rgb(255 255 255 / 24%);
+  background: rgb(255 255 255 / 9%);
+  color: #fff7f9;
+  border-radius: 12px;
+  min-height: 44px;
+  cursor: pointer;
+}
+.nc-gallery-close { padding: 10px 13px; flex-shrink: 0; font-size: 13px; }
+.nc-gallery-stage {
+  display: grid;
+  grid-template-columns: 60px minmax(0,1fr) 60px;
+  min-height: 0;
+  height: min(66dvh, 690px);
+  align-items: center;
+  gap: 8px;
+  padding: 18px;
+}
+.nc-gallery-picture {
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #443049, #1e1421 70%);
+  border-radius: 14px;
+  display: grid;
+  place-items: center;
+}
+.nc-gallery-picture img { grid-area: 1/1; max-width: 100%; max-height: 100%; object-fit: contain;
+  transition: transform var(--nc2-normal) var(--nc2-ease);
+}
+.nc-gallery-picture [hidden] { display: none !important; }
+.nc-gallery-loading { grid-area:1/1; text-align:center; color: #dfc9d8; font-size: 13px; padding: 20px; }
+.nc-gallery-arrow { font: normal 31px Georgia,serif; width: 54px; height: 54px; }
+.nc-gallery-arrow:disabled { opacity: .3; cursor: not-allowed; }
+.nc-gallery-footer {
+  padding: 12px clamp(16px,3vw,28px) 22px;
+  display: flex; align-items: center; justify-content: space-between; gap: 20px;
+  border-top: 1px solid rgb(255 255 255 / 13%);
+}
+.nc-gallery-caption { display:flex; flex-direction:column; gap:5px; min-width:0; }
+.nc-gallery-caption strong { font:normal 17px Georgia,serif; overflow-wrap:anywhere; }
+.nc-gallery-caption small { color: #d8bfce; font-size: 12px; }
+.nc-gallery-tools { display:flex; flex-wrap:wrap; gap:8px; flex-shrink:0; }
+.nc-gallery-tools button { padding: 9px 13px; font-size: 13px; }
+.nc-gallery-tools button[aria-pressed="true"] { background: #bf8fae; color:#241925; }
+.nc-gallery-dialog button:focus-visible, .nc-music-dialog button:focus-visible {
+  outline: 3px solid #ffd6ed; outline-offset: 3px;
+}
+.nc-music-dialog { width: min(530px, 95vw); }
+.nc-music-panel { padding-bottom: 26px; }
+.nc-record-scene { padding: 20px 10px 13px; display:grid;place-items:center; }
+.nc-record-disc {
+  width: clamp(136px, 25vw, 192px); aspect-ratio:1;
+  border-radius:50%; display:grid; place-items:center;
+  background: repeating-radial-gradient(circle at center,#241923 0 3px,#412b41 4px,#211521 7px,#281c2a 10px);
+  box-shadow:0 16px 32px #100a15;
+  transform: rotate(-9deg);
+}
+.nc-record-label {
+  width: 40%; height:40%; border: 3px solid #dab0c3; border-radius:50%;
+  background:#af7e9e; color:#fff;
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  font:35px Georgia,serif;
+}
+.nc-record-label small { font: 10px "Trebuchet MS",sans-serif; letter-spacing:.05em; }
+.nc-music-note,.nc-music-privacy {
+  text-align:center; font-size:12px; line-height:1.6; color:#f3ddec;
+  padding: 0 24px; max-width:440px; margin: 8px auto 14px;
+}
+.nc-music-privacy {font-size:11px;color:#baa4b5;margin-top:12px;}
+.nc-spotify-frame {padding: 0 clamp(13px, 3vw, 23px); min-height: 180px;}
+.nc-spotify-frame iframe {display:block;border-radius:14px;background:#37283a;}
+.music-card-interactive {gap:12px; align-items:center;}
+.music-card-interactive .music-card-info {display:flex; flex:1;flex-direction:column;min-width:120px;gap:5px;}
+.music-card-interactive .music-card-actions {display:flex;flex-wrap:wrap;gap:9px;align-items:center;}
+.music-card-actions .btn { min-height: 44px;cursor:pointer;}
+.nc-mini-record {
+  width: 48px;height:48px;flex:0 0 48px;border-radius:50%;
+  display:grid;place-items:center;
+  background:repeating-radial-gradient(circle,#322334 0 3px,#49334c 4px,#2b1e2d 8px);
+  box-shadow: 0 5px 10px #4c28452b;
+}
+.nc-mini-record span { background:#ddabc2; border-radius:50%;width:23px;height:23px;
+  display:grid;place-items:center;color:#4f3044;font:18px Georgia,serif;
+}
+.cat-sticker.selected .cat-sticker-picture {
+  animation: nc-mood-heartbeat 380ms var(--nc2-ease) 1;
+}
+@keyframes nc-mood-heartbeat {
+  0% { transform:scale(1); } 48% {transform:scale(1.09) rotate(-3deg);} 100% {transform:scale(1);}
+}
+@media(max-width:600px) {
+  .nc-gallery-dialog {max-width:100vw;width:100vw;max-height:100dvh;height:100dvh;border-radius:0;}
+  .nc-gallery-panel{max-height:100dvh;height:100dvh;}
+  .nc-gallery-stage{flex:1;height:auto;grid-template-columns:42px minmax(0,1fr) 42px;gap:3px;padding:10px 4px;}
+  .nc-gallery-arrow{width:42px;height:52px;}
+  .nc-gallery-footer{padding:14px 17px calc(14px + env(safe-area-inset-bottom,0px));align-items:flex-start;flex-direction:column;gap:12px;}
+  .nc-gallery-tools{width:100%;}
+  .nc-gallery-tools button{flex:1;}
+  .nc-gallery-header{padding:14px;}
+  .nc-music-panel{max-height:96dvh;overflow-y:auto;}
+  .music-card-interactive .music-card-actions {width:100%;justify-content:space-between;}
+}
+@media(prefers-reduced-motion:reduce){
+  .memory-preview, .nc-gallery-picture img, .cat-sticker.selected .cat-sticker-picture {
+    animation:none !important;transition:none !important;transform:none !important;
+  }
+}

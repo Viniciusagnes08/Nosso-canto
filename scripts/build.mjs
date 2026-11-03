@@ -37,6 +37,7 @@ for (const file of [
   "account.css",
   "mood.css",
   "reels.css",
+  "experiences.css",
   "universe.css",
   "icon.svg",
 ])
