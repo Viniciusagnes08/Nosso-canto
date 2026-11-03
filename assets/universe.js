@@ -154,15 +154,28 @@ function initialView() {
 async function connectFavorites() {
   let data = null;
   try { ({ data } = await auth?.auth?.getSession?.() || {}); } catch {}
-  state.user = data?.session?.user?.id || null;
-  state.favorites = readLocal();
-  renderCards();
-  if (!state.user || !navigator.onLine) return;
+  const uid = data?.session?.user?.id || null;
+  if (state.user !== uid) {
+    state.stop?.();
+    state.stopProfile?.();
+    state.stop = null;
+    state.stopProfile = null;
+    state.user = uid;
+    state.topics = [];
+    state.topic = "all";
+    state.kind = "all";
+    state.items = {};
+    state.errors = {};
+    state.initialized = false;
+    state.favorites = readLocal();
+    renderTopics();
+    renderCards();
+  }
+  if (!uid || !navigator.onLine || state.stopProfile) return;
   try {
     const db = getFirestore(getApp());
     const records = collection(db, "spaces", "nosso-canto", "entries");
-    state.stop?.();
-    state.stop = onSnapshot(query(records, where("authorId", "==", state.user)), snapshot => {
+    state.stop = onSnapshot(query(records, where("authorId", "==", uid)), snapshot => {
       const fav = new Map();
       for (const item of snapshot.docs) {
         const value = item.data();
@@ -174,8 +187,26 @@ async function connectFavorites() {
     }, () => {
       root.querySelector("#universe-status").textContent = "Favoritos locais disponíveis; sincronização indisponível.";
     });
+    state.stopProfile = onSnapshot(doc(db, "spaces", "nosso-canto", "profiles", uid), snapshot => {
+      const next = topicsForProfile(snapshot.data() || {});
+      if (JSON.stringify(next) !== JSON.stringify(state.topics)) {
+        state.topics = next;
+        state.topic = "all";
+        state.items = {};
+        state.errors = {};
+        state.initialized = false;
+        renderTopics();
+        renderCards();
+        void loadAll(true);
+      } else {
+        renderTopics();
+        renderCards();
+      }
+    }, () => {
+      root.querySelector("#universe-status").textContent = "Não foi possível consultar seus interesses. Abra Meu cantinho.";
+    });
   } catch {
-    root.querySelector("#universe-status").textContent = "Favoritos guardados neste aparelho; conexão indisponível.";
+    root.querySelector("#universe-status").textContent = "Não foi possível conectar seu perfil. Tente novamente.";
   }
 }
 async function toggleFavorite(id) {
@@ -209,7 +240,19 @@ async function toggleFavorite(id) {
     root.querySelector("#universe-status").textContent = "Não foi possível sincronizar. A alteração foi desfeita.";
   }
 }
+function closeUniverse() {
+  state.open = false;
+  if (root) root.hidden = true;
+  const app = document.querySelector("#app");
+  if (app) app.hidden = false;
+  document.querySelectorAll("[data-universe-open]").forEach(b => b.classList.remove("active"));
+}
 function handleClick(event) {
+  if (event.target.closest("[data-universe-settings]")) {
+    closeUniverse();
+    document.querySelector('[data-nav="ajustes"]')?.click();
+    return;
+  }
   const topic = event.target.closest("[data-universe-topic]");
   if (topic) { state.topic = topic.dataset.universeTopic; renderCards(); return; }
   const kind = event.target.closest("[data-universe-kind]");
@@ -219,15 +262,24 @@ function handleClick(event) {
   if (event.target.closest("#universe-refresh")) void loadAll(true);
 }
 async function loadAll(force = false) {
-  if (state.busy) return;
+  if (!state.topics.length) {
+    state.items = {};
+    state.errors = {};
+    state.initialized = false;
+    renderCards();
+    return;
+  }
+  if (state.busy) { state.pendingReload = true; return; }
   if (!force && state.initialized) { renderCards(); return; }
   state.busy = true;
   state.errors = {};
+  const requestedTopics = [...state.topics];
   renderCards();
-  const requests = TOPICS.flatMap(topic => TYPES.slice(0, 3).map(async kind => {
+  const kinds = ["news", "videos", "music"];
+  const requests = requestedTopics.flatMap(topic => kinds.map(async kind => {
     const key = topic + ":" + kind;
     try {
-      const response = await fetch("/api/universe?topic=" + topic + "&kind=" + kind,
+      const response = await fetch("/api/universe?topic=" + encodeURIComponent(topic) + "&kind=" + kind,
         { signal: AbortSignal.timeout(12000), credentials: "omit" });
       if (!response.ok) throw new Error("Fonte indisponível");
       const payload = await response.json();
@@ -244,6 +296,10 @@ async function loadAll(force = false) {
   state.busy = false;
   state.initialized = true;
   renderCards();
+  if (state.pendingReload || JSON.stringify(requestedTopics) !== JSON.stringify(state.topics)) {
+    state.pendingReload = false;
+    void loadAll(true);
+  }
 }
 function open() {
   if (!state.initialized) void loadAll();
@@ -264,12 +320,8 @@ document.addEventListener("click", (event) => {
     if (!root) initialView();
     if (state.user === null && !state.stop) void connectFavorites().catch(() => {});
     open();
-  } else if (event.target.closest("[data-nav]") && state.open) {
-    state.open = false;
-    if (root) root.hidden = true;
-    const app = document.querySelector("#app");
-    if (app) app.hidden = false;
-    document.querySelectorAll("[data-universe-open]").forEach(b => b.classList.remove("active"));
+  } else if (event.target.closest("[data-nav],[data-reels-open]") && state.open) {
+    closeUniverse();
   }
 });
 
