@@ -1,5 +1,5 @@
 import { getApp } from "@firebase/app";
-import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, getDoc, getDocs, serverTimestamp } from "@firebase/firestore";
+import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, getDoc, getDocs, writeBatch, serverTimestamp } from "@firebase/firestore";
 import { mediaGet, mediaPut } from "./media.js";
 import { cleanProfile } from "./reels-model.js";
 import { selectUnpublishedLegacy, visibleSnapshotVersion } from "./core/sync-policy.js";
@@ -56,12 +56,26 @@ export async function connectRecords(userId, initialRecords, receive, failure, i
   // Legacy import is create-only: a stale copy on this phone cannot clobber a
   // fresher entry that another device already synchronized to Firestore.
   // A single query is cheaper than one getDoc call per historical record.
+  const existing = await getDocs(query(records, where("authorId", "==", userId)));
   if (initialRecords.length) {
-    const existing = await getDocs(query(records, where("authorId", "==", userId)));
     const existingIds = new Set(existing.docs.map(entry => entry.id));
     const seed = selectUnpublishedLegacy(initialRecords, existingIds, userId);
-    for (const record of seed)
-      await setDoc(doc(records, record.id), await serialize(record, userId));
+    for (const record of seed) {
+      const selected = ["event", "music"].includes(record.type) && record.sharingSelected !== true
+        ? { ...record, shared: false }
+        : record;
+      await setDoc(doc(records, record.id), await serialize(selected, userId));
+    }
+  }
+  // Older releases shared every imported event and song. Return those to their
+  // author before listeners publish them; explicitly selected items stay shared.
+  const oldShared = existing.docs.filter(entry =>
+    ["event", "music"].includes(entry.data().type) && entry.data().shared === true && entry.data().sharingSelected !== true,
+  );
+  for (let i = 0; i < oldShared.length; i += 400) {
+    const batch = writeBatch(db);
+    for (const entry of oldShared.slice(i, i + 400)) batch.update(entry.ref, { shared: false, updatedAt: serverTimestamp() });
+    await batch.commit();
   }
   const own = new Map(), shared = new Map();
   let publishing = Promise.resolve();
@@ -101,5 +115,6 @@ export async function connectRecords(userId, initialRecords, receive, failure, i
     close() { stopOwn(); stopShared(); stopProfile(); own.clear(); shared.clear(); },
   };
 }
+
 
 
