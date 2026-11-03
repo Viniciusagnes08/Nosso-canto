@@ -427,9 +427,26 @@ function renderLocalSettings() {
   </section>
   </div>`;
 }
+function renderAvatarEditor() {
+  const avatar = /^data:image\/jpeg;base64,[A-Za-z0-9+/=]{1,179970}$/.test(data.profile.avatarData || "") ? data.profile.avatarData : "";
+  return '<div class="profile-avatar-editor">' +
+    (avatar ? '<img alt="Foto do seu perfil" src="' + safe(avatar) + '">' : '<span class="profile-avatar-placeholder" aria-hidden="true">' + safe((data.profile.self || "V")[0].toUpperCase()) + '</span>') +
+    '<div><label for="profileAvatarInput">Foto do perfil</label><input id="profileAvatarInput" type="file" accept="image/jpeg,image/png,image/webp"><small>Até 6 MB · JPG, PNG, WebP</small></div></div>';
+}
+function renderPersonalProfileFields() {
+  const selected = new Set(topicsForProfile(data.profile));
+  const topicList = TOPIC_CATALOG.map(topic =>
+    '<label class="profile-topic"><input type="checkbox" name="universeTopics" value="' + safe(topic.id) + '"' +
+    (selected.has(topic.id) ? ' checked' : '') + '><span aria-hidden="true">' + safe(topic.icon) + '</span>' + safe(topic.label) + '</label>'
+  ).join("");
+  return '<div class="field"><label for="profileBio">Sobre você</label><textarea id="profileBio" name="bio" rows="3" maxlength="240" placeholder="Um pouco sobre você">' + safe(data.profile.bio || "") + '</textarea></div>' +
+    '<div class="field"><label for="profileInterests">Outros interesses pessoais</label><input id="profileInterests" name="interests" maxlength="160" value="' + safe(data.profile.interests || "") + '" placeholder="O que você ama fazer?"></div>' +
+    '<div class="field"><label for="profileMusic">Uma música que te representa</label><input id="profileMusic" name="favoriteMusic" maxlength="100" value="' + safe(data.profile.favoriteMusic || "") + '"></div>' +
+    '<fieldset class="profile-topic-fieldset"><legend>Seus temas no Meu Universo</legend><p class="setting-note">Selecione até 8 assuntos. Cada pessoa terá um feed diferente.</p><div class="profile-topic-grid">' + topicList + '</div></fieldset>';
+}
 function renderSettings() {
   if (localOnly) return renderLocalSettings();
-  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Seu perfil", "Cada pessoa entra com sua própria conta.")}<p class="setting-note">Foto, biografia, interesses e música favorita ficam no seu perfil pessoal.</p><button type="button" class="btn btn-soft" data-reels-profile-open>Editar meu perfil completo ↗</button><p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm"><div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div><button class="btn btn-primary">Salvar perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "A nuvem mantém os dois celulares atualizados.")}<p class="setting-note">O backup é uma cópia extra das fotos e anotações que esta conta consegue visualizar. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Ao entrar pela primeira vez, os registros já associados a esta conta neste navegador são migrados para a nuvem, preservando a escolha entre compartilhado e privado.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar meus registros da nuvem</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você escolher. Fotos, eventos e músicas importados começam como privados.</p><p class="setting-note">Registros compartilhados aparecem automaticamente para vocês dois. Registros privados ficam visíveis somente para quem os criou.</p><p class="setting-note">Sair da conta não apaga o que já foi guardado na nuvem.</p></section></div>`;
+  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Meu perfil", "Seu perfil é individual; o conteúdo registrado no espaço do casal é compartilhado.")}<p class="setting-note">Nome, foto, descrição e interesses ficam no seu perfil. Fotos, calendário, humor e outros registros que você adicionar serão compartilhados automaticamente com seu amor.</p><p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm">${renderAvatarEditor()}<div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div>${renderPersonalProfileFields()}<button class="btn btn-primary">Salvar meu perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "A nuvem mantém os dois celulares atualizados.")}<p class="setting-note">O backup é uma cópia extra das fotos e anotações que esta conta consegue visualizar. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Ao entrar pela primeira vez, os registros já associados a esta conta neste navegador são migrados para a nuvem, preservando a escolha entre compartilhado e privado.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar meus registros da nuvem</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você selecionar no provedor. Fotos, eventos e músicas importados são compartilhados automaticamente com vocês dois.</p><p class="setting-note">Novos registros aparecem automaticamente nos dois perfis. Registros antigos marcados como privados continuam privados até uma migração específica; Meu Universo e preferências pessoais são individuais.</p><p class="setting-note">Sair da conta não apaga o que já foi guardado na nuvem.</p></section></div>`;
 }
 
 function render() {
@@ -1012,10 +1029,20 @@ document.addEventListener("submit", async (e) => {
         .trim()
         .slice(0, 40),
       anniversary: String(form.get("anniversary") || ""),
+      bio: String(form.get("bio") || "").trim().slice(0, 240),
+      interests: String(form.get("interests") || "").trim().slice(0, 160),
+      favoriteMusic: String(form.get("favoriteMusic") || "").trim().slice(0, 100),
+      universeTopics: form.getAll("universeTopics").filter(value => typeof value === "string").slice(0, 8),
     };
+    if (form.getAll("universeTopics").length > 8) {
+      toast("Escolha no máximo oito temas no Meu Universo.");
+      return;
+    }
     const button = e.target.querySelector('button[type="submit"], button:not([type])');
     if (button) button.disabled = true;
     try {
+      const avatarFile = e.target.querySelector("#profileAvatarInput")?.files?.[0];
+      if (avatarFile) profile.avatarData = await profileImageToDataUrl(avatarFile);
       if (!localOnly) {
         if (!cloudSync) throw new Error("A nuvem ainda não está conectada.");
         await cloudSync.saveProfile(profile);
