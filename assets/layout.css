@@ -381,3 +381,10 @@ main:focus {
     }
   }
 }
+
+/* Personal universe entry lives beside the existing couple navigation. */
+.universe-entry {display:flex;align-items:center;gap:10px;width:100%;text-align:left;border:1px solid #e9dce8;border-radius:15px;background:#f7eef4;color:#805d80;padding:13px;margin:6px 0 14px;font-weight:750;font-size:13px;}
+.universe-entry span {font-size:21px;line-height:1;}
+.universe-entry small {font-size:10px;font-weight:500;margin-left:auto;opacity:.74;}
+.universe-entry.active {background:#76577c;color:white;border-color:#76577c;}
+@media(max-width:720px){.universe-entry{display:none;}.mobile-nav{overflow-x:auto;scrollbar-width:thin;}.mobile-nav>.mobile-tab{flex:0 0 auto;min-width:68px;}}
