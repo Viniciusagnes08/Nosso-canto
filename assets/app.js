@@ -9,6 +9,7 @@ import { TOPIC_CATALOG, topicsForProfile } from "./universe-topics.js";
 import { profileImageToDataUrl } from "./profile-image.js";
 import { visibleMediaCaption } from "./reels-caption.js";
 import { installMemoryGallery } from "./memory-gallery.js";
+import { installMusicEmbed, spotifyEmbedUrl } from "./music-embed.js";
 import {
   mediaPut,
   mediaGet,
@@ -415,10 +416,30 @@ function renderMemories() {
     </section>
   </div>`;
 }
+function renderMusicCard(entry) {
+  const inApp = spotifyEmbedUrl(entry.url);
+  return `<article class="music-card music-card-interactive">
+    <div class="nc-mini-record" aria-hidden="true"><span>♡</span></div>
+    <div class="music-card-info"><strong>${safe(entry.title)}</strong><small>${safe(entry.artist || "Escolhida com carinho")}</small></div>
+    <div class="music-card-actions">
+      ${inApp ? `<button type="button" class="btn btn-small btn-soft" data-music-play="${safe(entry.url)}" data-music-title="${safe(entry.title)}" aria-label="Ouvir ${safe(entry.title)} no player oficial do Spotify">Ouvir aqui</button>` : ""}
+      ${entry.url ? `<a class="music-link" href="${safe(validUrl(entry.url))}" target="_blank" rel="noopener noreferrer">Abrir ↗</a>` : ""}
+      ${entry.owner !== "partner" ? `<button class="mini-action" data-delete="${safe(entry.id)}" aria-label="Apagar música">×</button>` : ""}
+    </div>
+  </article>`;
+}
 function renderMusic() {
   const tracks = ownItems("music");
-  return `${intro("PLAYLIST DO CORA\u00c7\u00c3O", "Nossa trilha sonora", "As m\u00fasicas que lembram os dois, que marcaram momentos ou que voc\u00eas querem ouvir juntos.", '<button class="btn btn-primary" data-open="music">+ Adicionar m\u00fasica</button>')}
- <div class="two-col"><section class="paper-card">${sec("M\u00fasicas especiais", "Guarde um link do Spotify, YouTube ou outro servi\u00e7o.")}${tracks.length ? `<div class="music-list">${tracks.map((e) => `<div class="music-card"><span class="music-cover">\u266b</span><div style="min-width:0"><strong>${safe(e.title)}</strong><small>${safe(e.artist || "Escolhida com carinho")}</small></div>${e.url ? `<a class="music-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir \u2197</a>` : ""}${e.owner !== "partner" ? `<button class="mini-action" data-delete="${safe(e.id)}" aria-label="Apagar m\u00fasica">\u00d7</button>` : ""}</div>`).join("")}</div>` : empty("\u266b", "A trilha sonora come\u00e7a aqui", "Toda hist\u00f3ria tem uma m\u00fasica especial. Qual \u00e9 a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma m\u00fasica</button>')}</section><div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">\u266b UMA IDEIA PARA OS DOIS</span><p class="tip-text">\u201cUma m\u00fasica pode ser a forma mais bonita de dizer: lembrei de voc\u00ea.\u201d</p></section><div class="notice">Conecte sua conta em Meu cantinho → Suas conexões para escolher favoritas ou músicas recentes. Nenhuma música é guardada automaticamente.</div></div></div>`;
+  return `${intro("PLAYLIST DO CORAÇÃO", "Nossa trilha sonora", "As músicas que lembram os dois, que marcaram momentos ou que vocês querem ouvir juntos.", '<button class="btn btn-primary" data-open="music">+ Adicionar música</button>')}
+  <div class="two-col"><section class="paper-card">
+    ${sec("Músicas especiais", "O player oficial do Spotify é aberto somente quando você escolher.")}
+    ${tracks.length ? `<div class="music-list">${tracks.map(renderMusicCard).join("")}</div>` : empty("♫", "A trilha sonora começa aqui", "Toda história tem uma música especial. Qual é a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma música</button>')}
+  </section>
+  <div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">♫ UMA IDEIA PARA OS DOIS</span>
+    <p class="tip-text">“Uma música pode ser a forma mais bonita de dizer: lembrei de você.”</p></section>
+    <div class="notice">O Spotify oficial controla a reprodução e a disponibilidade de cada faixa. Nossa Trilha não salva arquivos de música nem reproduz faixas automaticamente.</div>
+    <div class="notice">Em Meu cantinho → Suas conexões, vocês podem escolher músicas já salvas na conta. Nada é importado sem essa escolha.</div>
+  </div></div>`;
 }
 function renderLocalSettings() {
   return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Você está usando a entrada local neste dispositivo.")}<div class="settings-grid">
@@ -1213,6 +1234,7 @@ export async function startApp(user, options = {}) {
   });
   if (!localOnly) mountReels(user);
   installMemoryGallery($("#app"));
+  installMusicEmbed($("#app"));
   navigate(tab);
 }
 
