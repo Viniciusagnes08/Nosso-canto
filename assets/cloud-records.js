@@ -1,31 +1,65 @@
-import { getApp } from '@firebase/app';
-import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp } from '@firebase/firestore';
+import { getApp } from "@firebase/app";
+import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp } from "@firebase/firestore";
+import { mediaGet, mediaPut } from "./media.js";
 
-// Not enabled until the two members and database rules have been provisioned.
-export function connectRecords(spaceId, userId, receive, failure) {
-  if (!spaceId || !userId) throw new Error('Entre para sincronizar.');
+const SPACE_ID = "nosso-canto";
+const blobToDataUrl = (blob) => new Promise((resolve, reject) => {
+  const reader = new FileReader();
+  reader.onload = () => resolve(reader.result);
+  reader.onerror = () => reject(reader.error);
+  reader.readAsDataURL(blob);
+});
+async function dataUrlToBlob(value) {
+  if (!/^data:image\/(jpeg|png|webp);base64,[A-Za-z0-9+/=]+$/.test(value))
+    throw new Error("Imagem recebida em formato inválido.");
+  return (await fetch(value)).blob();
+}
+async function serialize(record, userId) {
+  if (!record.id || (record.authorId && record.authorId !== userId))
+    throw new Error("Você só pode alterar seus próprios registros.");
+  const clean = JSON.parse(JSON.stringify(record));
+  delete clean.owner;
+  delete clean.updatedAt;
+  if (clean.photoId) {
+    const blob = await mediaGet(clean.photoId);
+    if (blob) {
+      const photoData = await blobToDataUrl(blob);
+      if (photoData.length > 800000)
+        throw new Error("A foto ficou grande demais para sincronizar.");
+      clean.photoData = photoData;
+    }
+  }
+  return { ...clean, authorId: userId, shared: clean.shared === true, updatedAt: serverTimestamp() };
+}
+async function hydrate(raw, userId) {
+  const record = { ...raw, owner: raw.authorId === userId ? "self" : "partner" };
+  if (record.photoId && record.photoData)
+    await mediaPut(record.photoId, await dataUrlToBlob(record.photoData));
+  delete record.photoData;
+  delete record.updatedAt;
+  return record;
+}
+export async function connectRecords(userId, initialRecords, receive, failure) {
+  if (!userId) throw new Error("Entre para sincronizar.");
   const db = getFirestore(getApp());
-  const records = collection(db, 'spaces', spaceId, 'entries');
+  const records = collection(db, "spaces", SPACE_ID, "entries");
+  for (const record of initialRecords.filter((item) => !item.authorId || item.authorId === userId))
+    await setDoc(doc(records, record.id), await serialize(record, userId), { merge: true });
   const own = new Map(), shared = new Map();
-  const publish = () => receive([...new Map([...shared, ...own]).values()]);
-  const listen = (filter, target) => onSnapshot(query(records, filter), snapshot => {
+  let publishing = Promise.resolve();
+  const publish = () => {
+    const snapshot = [...new Map([...shared, ...own]).values()];
+    publishing = publishing.then(async () => receive(await Promise.all(snapshot.map((row) => hydrate(row, userId))))).catch(failure);
+  };
+  const listen = (filter, target) => onSnapshot(query(records, filter), (snapshot) => {
     target.clear();
     for (const record of snapshot.docs) target.set(record.id, { ...record.data(), id: record.id });
     publish();
   }, failure);
-  const stopOwn = listen(where('authorId', '==', userId), own);
-  const stopShared = listen(where('shared', '==', true), shared);
+  const stopOwn = listen(where("authorId", "==", userId), own);
+  const stopShared = listen(where("shared", "==", true), shared);
   return {
-    async save(record) {
-      if (!record.id || (record.authorId && record.authorId !== userId))
-        throw new Error('Você só pode alterar seus próprios registros.');
-      const clean = JSON.parse(JSON.stringify(record));
-      // This promise resolves only after acknowledgement from the server.
-      await setDoc(doc(records, record.id), {
-        ...clean, authorId: userId, shared: record.shared === true,
-        updatedAt: serverTimestamp(),
-      });
-    },
+    async save(record) { await setDoc(doc(records, record.id), await serialize(record, userId)); },
     async remove(id) { await deleteDoc(doc(records, id)); },
     close() { stopOwn(); stopShared(); own.clear(); shared.clear(); },
   };

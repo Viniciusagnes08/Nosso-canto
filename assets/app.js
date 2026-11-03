@@ -3,6 +3,7 @@ import { logout } from "./auth.js";
 import { safe, uid, localDay, displayDate, dateTime } from "./utils.js";
 import { MOODS, LEGACY_MOODS, TIPS, PRESETS, TYPES } from "./catalog.js";
 import { moodChoices, moodPortrait } from "./mood-view.js";
+import { connectRecords } from "./cloud-records.js";
 import {
   mediaPut,
   mediaGet,
@@ -16,6 +17,8 @@ const $ = (s) => document.querySelector(s);
 let STORE = null;
 let accountUser = null;
 let localOnly = false;
+let cloudSync = null;
+let cloudStatus = "local";
 function load() {
   try {
     const x = JSON.parse(localStorage.getItem(STORE));
@@ -59,9 +62,23 @@ function persist() {
     );
   }
 }
-function addRecord(record) {
+async function addRecord(record) {
+  if (!localOnly && !cloudSync)
+    throw new Error("A nuvem ainda não está conectada. Aguarde e tente novamente.");
+  if (!localOnly && !navigator.onLine)
+    throw new Error("Você está sem internet. Reconecte para salvar com segurança.");
   data.entries.push(record);
   persist();
+  if (cloudSync) {
+    try {
+      await cloudSync.save(record);
+    } catch {
+      data.entries = data.entries.filter((item) => item.id !== record.id);
+      if (record.photoId) await mediaDelete(record.photoId);
+      persist();
+      throw new Error("Não foi possível confirmar o salvamento na nuvem. Tente novamente.");
+    }
+  }
 }
 function ownItems(type) {
   return data.entries
@@ -105,7 +122,11 @@ function announce() {
   $("#topAvatar").textContent = initial(data.profile.self);
   $("#modeBanner").innerHTML = localOnly
     ? '<span><strong>Modo local ativo:</strong> registros guardados somente neste dispositivo. Não há conta nem sincronização entre vocês.</span><button class="text-link" data-nav="ajustes">Entender</button>'
-    : '<span><strong>Seu perfil neste aparelho:</strong> estes registros são locais. <a href="/nosso-espaco.html">Abrir nosso espaço na nuvem →</a></span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
+    : cloudStatus === "online"
+      ? '<span><strong>Sincronizado:</strong> alterações compartilhadas aparecem nos dois celulares automaticamente.</span><button class="text-link" data-nav="ajustes">Privacidade</button>'
+      : cloudStatus === "error"
+        ? '<span><strong>Sincronização interrompida:</strong> confira a conexão antes de fazer novas alterações.</span><button class="text-link" data-nav="ajustes">Ver detalhes</button>'
+        : '<span><strong>Conectando:</strong> preparando o espaço compartilhado de vocês…</span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
 }
 function navigate(next) {
   if (
@@ -185,7 +206,7 @@ function formatEntry(e, showPhoto = true) {
   const title =
     e.title || (mood ? "Me senti " + mood.name.toLowerCase() : t.label);
   const note = e.note || e.description || "";
-  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto adicionada por voc\u00ea" data-photo="${safe(e.photoId)}">` : ""}</div><div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div></article>`;
+  return `<article class="timeline-item"><span class="timeline-emoji ${mood ? "cat-timeline-emoji" : ""}" aria-hidden="true">${mood ? moodPortrait(mood, "cat-mood-thumb") : t.icon}</span><div class="timeline-body"><strong>${safe(title)}</strong> ${e.shared === false ? '<span class="tag neutral">Privado</span>' : ""}<small>${safe(e.owner === "partner" ? data.profile.partner : data.profile.self)} \u00b7 ${displayDate(e.date || e.created, { day: "2-digit", month: "short" })}${e.time ? " · " + safe(e.time) : ""}</small>${note ? `<p>${safe(note)}</p>` : ""}${e.type === "music" && e.url ? `<p><a class="text-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir a m\u00fasica \u2197</a></p>` : ""}${showPhoto && e.photoId ? `<img class="timeline-image" alt="Foto do registro" data-photo="${safe(e.photoId)}">` : ""}</div>${e.owner !== "partner" ? `<div class="timeline-actions"><button class="mini-action" data-delete="${safe(e.id)}" title="Apagar registro" aria-label="Apagar registro">\u2715</button></div>` : ""}</article>`;
 }
 function validUrl(url) {
   try {
@@ -270,7 +291,7 @@ function renderMoodScreen() {
           <input type="date" id="moodDate" name="date" value="${localDay()}" required>
           <label class="cat-mood-toggle" for="moodShared">
             <input type="checkbox" id="moodShared" name="shared">
-            Compartilhar com meu amor quando a sincronização estiver ativa
+            Compartilhar com meu amor
           </label>
           <button type="submit" class="cat-mood-save" id="inlineSaveMood" ${current ? "" : "disabled"}>Salvar meu humor ♡</button>
           <p id="moodInlineFeedback" class="cat-mood-feedback" role="status" aria-live="polite"></p>
@@ -374,12 +395,12 @@ function renderMemories() {
   return `${intro("FOTOS QUE ABRA\u00c7AM", "Nossas mem\u00f3rias", "Das fotografias mais antigas aos registros de hoje, todas t\u00eam um lugar especial.", '<button class="btn btn-primary" data-open="memory">+ Guardar uma foto</button>')}
  <div class="stack"><div class="notice">Google Fotos: por seguran\u00e7a, a API oficial s\u00f3 permite importar imagens que cada pessoa escolher. Selecione fotos do aparelho ou abra Meu cantinho → Suas conexões para importar fotos escolhidas no Google.</div>
  ${thisDay.length ? `<section class="paper-card">${sec("Neste dia, em outros anos", "Pequenos reencontros com o passado.")}<div class="photo-grid">${thisDay.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="Foto de ${safe(e.date)}"></div>`).join("")}</div></section>` : ""}
- <section class="paper-card">${sec("Nosso \u00e1lbum", `${photos.length} fotografia(s) guardada(s).`)}${photos.length ? `<div class="photo-grid">${photos.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="${safe(e.title || "Nossa mem\u00f3ria")}"><div class="photo-caption"><strong>${safe(e.title || "Nosso momento")}</strong><br>${displayDate(e.date, { day: "2-digit", month: "short", year: "numeric" })}</div><button class="photo-delete" data-delete="${safe(e.id)}" aria-label="Excluir foto">\u00d7</button></div>`).join("")}</div>` : empty("\u{1F4F7}", "O \u00e1lbum espera por voc\u00eas", "Que tal uma foto do primeiro encontro ou de um momento inesquec\u00edvel?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}</section></div>`;
+ <section class="paper-card">${sec("Nosso \u00e1lbum", `${photos.length} fotografia(s) guardada(s).`)}${photos.length ? `<div class="photo-grid">${photos.map((e) => `<div class="memory-tile"><img data-photo="${safe(e.photoId)}" alt="${safe(e.title || "Nossa mem\u00f3ria")}"><div class="photo-caption"><strong>${safe(e.title || "Nosso momento")}</strong><br>${displayDate(e.date, { day: "2-digit", month: "short", year: "numeric" })}</div>${e.owner !== "partner" ? `<button class="photo-delete" data-delete="${safe(e.id)}" aria-label="Excluir foto">\u00d7</button>` : ""}</div>`).join("")}</div>` : empty("\u{1F4F7}", "O \u00e1lbum espera por voc\u00eas", "Que tal uma foto do primeiro encontro ou de um momento inesquec\u00edvel?", '<button class="btn btn-soft" data-open="memory">Adicionar nossa primeira foto</button>')}</section></div>`;
 }
 function renderMusic() {
   const tracks = ownItems("music");
   return `${intro("PLAYLIST DO CORA\u00c7\u00c3O", "Nossa trilha sonora", "As m\u00fasicas que lembram os dois, que marcaram momentos ou que voc\u00eas querem ouvir juntos.", '<button class="btn btn-primary" data-open="music">+ Adicionar m\u00fasica</button>')}
- <div class="two-col"><section class="paper-card">${sec("M\u00fasicas especiais", "Guarde um link do Spotify, YouTube ou outro servi\u00e7o.")}${tracks.length ? `<div class="music-list">${tracks.map((e) => `<div class="music-card"><span class="music-cover">\u266b</span><div style="min-width:0"><strong>${safe(e.title)}</strong><small>${safe(e.artist || "Escolhida com carinho")}</small></div>${e.url ? `<a class="music-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir \u2197</a>` : ""}<button class="mini-action" data-delete="${safe(e.id)}" aria-label="Apagar m\u00fasica">\u00d7</button></div>`).join("")}</div>` : empty("\u266b", "A trilha sonora come\u00e7a aqui", "Toda hist\u00f3ria tem uma m\u00fasica especial. Qual \u00e9 a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma m\u00fasica</button>')}</section><div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">\u266b UMA IDEIA PARA OS DOIS</span><p class="tip-text">\u201cUma m\u00fasica pode ser a forma mais bonita de dizer: lembrei de voc\u00ea.\u201d</p></section><div class="notice">Conecte sua conta em Meu cantinho → Suas conexões para escolher favoritas ou músicas recentes. Nenhuma música é guardada automaticamente.</div></div></div>`;
+ <div class="two-col"><section class="paper-card">${sec("M\u00fasicas especiais", "Guarde um link do Spotify, YouTube ou outro servi\u00e7o.")}${tracks.length ? `<div class="music-list">${tracks.map((e) => `<div class="music-card"><span class="music-cover">\u266b</span><div style="min-width:0"><strong>${safe(e.title)}</strong><small>${safe(e.artist || "Escolhida com carinho")}</small></div>${e.url ? `<a class="music-link" href="${safe(validUrl(e.url))}" target="_blank" rel="noopener noreferrer">Ouvir \u2197</a>` : ""}${e.owner !== "partner" ? `<button class="mini-action" data-delete="${safe(e.id)}" aria-label="Apagar m\u00fasica">\u00d7</button>` : ""}</div>`).join("")}</div>` : empty("\u266b", "A trilha sonora come\u00e7a aqui", "Toda hist\u00f3ria tem uma m\u00fasica especial. Qual \u00e9 a primeira?", '<button class="btn btn-soft" data-open="music">Escolher uma m\u00fasica</button>')}</section><div class="stack"><section class="paper-card daily-tip"><span class="tip-badge">\u266b UMA IDEIA PARA OS DOIS</span><p class="tip-text">\u201cUma m\u00fasica pode ser a forma mais bonita de dizer: lembrei de voc\u00ea.\u201d</p></section><div class="notice">Conecte sua conta em Meu cantinho → Suas conexões para escolher favoritas ou músicas recentes. Nenhuma música é guardada automaticamente.</div></div></div>`;
 }
 function renderLocalSettings() {
   return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Você está usando a entrada local neste dispositivo.")}<div class="settings-grid">
@@ -406,7 +427,7 @@ function renderLocalSettings() {
 }
 function renderSettings() {
   if (localOnly) return renderLocalSettings();
-  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Seu perfil", "Cada pessoa entra com sua própria conta.")}<p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm"><div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div><button class="btn btn-primary">Salvar perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "Guarde uma cópia antes de trocar de aparelho.")}<p class="setting-note">O backup inclui suas fotos e anotações deste perfil. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Seus registros anteriores à criação do login foram preservados neste navegador. Eles não são atribuídos automaticamente a uma conta.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar os dados locais deste perfil</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você escolher. Fotos, eventos e músicas importados começam como privados.</p><p class="setting-note">Os registros ficam neste navegador, separados por perfil, e ainda não são sincronizados com outro aparelho. O login não criptografa o armazenamento local: use seu próprio dispositivo.</p><p class="setting-note">Desconectar uma conta não apaga as cópias que você já guardou aqui.</p></section></div>`;
+  return `${intro("UM ESPAÇO SÓ DE VOCÊS", "Meu cantinho", "Seu perfil, suas conexões e seus registros.")}<div class="settings-grid"><section class="paper-card">${sec("Seu perfil", "Cada pessoa entra com sua própria conta.")}<p class="setting-note">${safe(accountUser?.email || "Conta conectada")}</p><form id="profileForm"><div class="field"><label for="profileSelf">Como você quer ser chamado(a)?</label><input id="profileSelf" name="self" maxlength="40" required value="${safe(data.profile.self)}"></div><div class="field"><label for="profilePartner">Como chamar seu amor?</label><input id="profilePartner" name="partner" maxlength="40" required value="${safe(data.profile.partner)}"></div><div class="field"><label for="profileDate">Quando a história começou?</label><input id="profileDate" name="anniversary" type="date" value="${safe(data.profile.anniversary)}"></div><button class="btn btn-primary">Salvar perfil</button></form><div class="divider"></div><button class="btn btn-line" data-logout>Sair da minha conta</button></section>${connectionCards()}<section class="paper-card">${sec("Seus registros", "A nuvem mantém os dois celulares atualizados.")}<p class="setting-note">O backup é uma cópia extra das fotos e anotações que esta conta consegue visualizar. Guarde o arquivo em um lugar privado.</p><div class="setting-actions"><button class="btn btn-soft" data-export>Exportar backup</button><label class="btn btn-line" for="backupInput">Importar backup<input id="backupInput" type="file" accept="application/json,.json" hidden></label></div><p class="setting-note">Ao entrar pela primeira vez, os registros já associados a esta conta neste navegador são migrados para a nuvem, preservando a escolha entre compartilhado e privado.</p><button class="text-link" data-legacy-export>Exportar registros da versão anterior</button><div class="divider"></div><button class="btn btn-quiet" data-clear>Apagar meus registros da nuvem</button></section><section class="paper-card">${sec("Sobre este espaço")}<p class="setting-note">As conexões importam somente o conteúdo que você escolher. Fotos, eventos e músicas importados começam como privados.</p><p class="setting-note">Registros compartilhados aparecem automaticamente para vocês dois. Registros privados ficam visíveis somente para quem os criou.</p><p class="setting-note">Sair da conta não apaga o que já foi guardado na nuvem.</p></section></div>`;
 }
 
 function render() {
@@ -437,9 +458,9 @@ const noteField = (label = "Quer contar mais?") =>
 const dateField = () =>
   `<div class="field"><label for="f-date">Quando?</label><input id="f-date" type="date" name="date" value="${safe(tab === "calendario" ? selectedDay : localDay())}" required></div>`;
 const uploadField = (required = false) =>
-  `<div class="field"><label for="f-photo">Uma foto ${required ? "para comprovar o desafio" : "(opcional)"}</label><div class="upload-zone">Uma imagem de at\u00e9 16 MB. Ela ficar\u00e1 salva neste aparelho.<input id="f-photo" name="photo" type="file" accept="image/*" ${required ? "required" : ""}></div></div>`;
+  `<div class="field"><label for="f-photo">Uma foto ${required ? "para comprovar o desafio" : "(opcional)"}</label><div class="upload-zone">Uma imagem de at\u00e9 16 MB. Se o registro for compartilhado, ela aparecerá nos dois celulares.<input id="f-photo" name="photo" type="file" accept="image/*" ${required ? "required" : ""}></div></div>`;
 const shareField = (checked = true) =>
-  `<label class="toggle-label"><input type="checkbox" name="shared" ${checked ? "checked" : ""}> Compartilhar este registro com meu amor, quando a sincroniza\u00e7\u00e3o estiver ativa</label>`;
+  `<label class="toggle-label"><input type="checkbox" name="shared" ${checked ? "checked" : ""}> Compartilhar este registro com meu amor</label>`;
 function openModal(type, meta) {
   dialogType = type;
   dialogMeta = meta || null;
@@ -557,7 +578,9 @@ async function saveModal(e) {
   if (!$("#entryForm").reportValidity()) return;
   const b = $("#saveButton");
   b.disabled = true;
-  $("#formFeedback").textContent = "";
+  $("#formFeedback").textContent = localOnly
+    ? "Salvando neste aparelho…"
+    : "Salvando na nuvem… mantenha esta tela aberta.";
   try {
     const form = new FormData($("#entryForm"));
     const rawDate = String(form.get("date") || localDay());
@@ -625,7 +648,7 @@ async function saveModal(e) {
     }
     if (!record.title && !["mood", "proof"].includes(type))
       throw new Error("Preencha o t\u00edtulo do registro.");
-    addRecord(record);
+    await addRecord(record);
     $("#entryDialog").close();
     render();
     toast("Seu registro foi guardado com carinho \u2661");
@@ -636,7 +659,7 @@ async function saveModal(e) {
     b.disabled = false;
   }
 }
-function saveInlineMood(e) {
+async function saveInlineMood(e) {
   e.preventDefault();
   const feedback = $("#moodInlineFeedback");
   const button = $("#inlineSaveMood");
@@ -651,7 +674,7 @@ function saveInlineMood(e) {
     const form = new FormData(e.target);
     const rawDate = String(form.get("date") || localDay());
     const date = /^\d{4}-\d{2}-\d{2}$/.test(rawDate) ? rawDate : localDay();
-    addRecord({
+    await addRecord({
       id: uid(),
       type: "mood",
       owner: "self",
@@ -695,7 +718,7 @@ async function addPreset(index) {
     toast("Este desafio j\u00e1 est\u00e1 na lista.");
     return;
   }
-  data.entries.push({
+  const record = {
     id: uid(),
     type: "challenge",
     owner: "self",
@@ -705,20 +728,35 @@ async function addPreset(index) {
     description: p.desc,
     emoji: p.emoji,
     shared: true,
-  });
-  persist();
+  };
+  await addRecord(record);
   render();
   toast("Desafio adicionado!");
 }
 async function removeItem(id) {
   const e = data.entries.find((x) => x.id === id);
   if (!e) return;
+  if (e.owner === "partner") {
+    toast("Somente quem criou o registro pode excluí-lo.");
+    return;
+  }
   if (
     !window.confirm(
       "Excluir este registro? Essa a\u00e7\u00e3o n\u00e3o pode ser desfeita.",
     )
   )
     return;
+  const removed = data.entries.filter(
+    (x) => x.id === id || (e.type === "challenge" && x.type === "proof" && x.challengeId === id),
+  );
+  if (cloudSync) {
+    try {
+      for (const item of removed) await cloudSync.remove(item.id);
+    } catch {
+      toast("Não foi possível confirmar a exclusão na nuvem.");
+      return;
+    }
+  }
   data.entries = data.entries.filter(
     (x) =>
       x.id !== id &&
@@ -815,8 +853,12 @@ async function importBackup(file) {
       entries: validEntries,
     };
     persist();
+    if (cloudSync) {
+      for (const record of validEntries.filter((item) => item.owner !== "partner"))
+        await cloudSync.save(record);
+    }
     navigate("inicio");
-    toast("Backup importado com sucesso.");
+    toast(cloudSync ? "Backup importado e confirmado na nuvem." : "Backup importado com sucesso.");
   } catch (err) {
     toast(err?.message || "Arquivo inv\u00e1lido.");
   }
@@ -922,17 +964,28 @@ window.addEventListener("click", async (e) => {
   if (e.target.closest("[data-clear]")) {
     if (
       confirm(
-        "Apagar todos os registros, fotos e nomes salvos neste navegador?",
+        localOnly
+          ? "Apagar todos os registros, fotos e nomes salvos neste navegador?"
+          : "Apagar da nuvem todos os registros criados por você? Os registros do seu amor serão preservados.",
       )
     ) {
+      const mine = data.entries.filter((item) => item.owner !== "partner");
+      if (cloudSync) {
+        try {
+          for (const item of mine) await cloudSync.remove(item.id);
+        } catch {
+          toast("Não foi possível confirmar a exclusão na nuvem.");
+          return;
+        }
+      }
       await mediaClear();
       data = {
         profile: { self: "Voc\u00ea", partner: "Seu amor", anniversary: "" },
-        entries: [],
+        entries: data.entries.filter((item) => item.owner === "partner"),
       };
       persist();
       navigate("inicio");
-      toast("Dados locais apagados.");
+      toast(localOnly ? "Dados locais apagados." : "Seus registros foram apagados da nuvem.");
     }
     return;
   }
@@ -993,7 +1046,7 @@ if (
 )
   navigator.serviceWorker.register("./sw.js").catch(() => {});
 
-export function startApp(user, options = {}) {
+export async function startApp(user, options = {}) {
   if (!user?.id) throw new Error("Entre para continuar.");
   localOnly = options.localOnly === true;
   if (localOnly && user.id !== "local-only-v1")
@@ -1002,6 +1055,27 @@ export function startApp(user, options = {}) {
   STORE = localOnly ? "entre-nos-local-isolated-v1" : "entre-nos-user-v1:" + user.id;
   setMediaUser(localOnly ? "local-isolated-v1" : user.id);
   data = load();
+  if (!localOnly) {
+    cloudStatus = "connecting";
+    try {
+      cloudSync = await connectRecords(
+        user.id,
+        data.entries,
+        (entries) => {
+          data.entries = entries;
+          persist();
+          cloudStatus = "online";
+          render();
+        },
+        () => {
+          cloudStatus = "error";
+          render();
+        },
+      );
+    } catch {
+      cloudStatus = "error";
+    }
+  }
   if (!localOnly) initConnections(user, {
     refresh: render,
     toast,
@@ -1028,8 +1102,7 @@ export function startApp(user, options = {}) {
           await mediaPut(record.photoId, await compress(blob));
         }
         try {
-          data.entries.push(record);
-          persist();
+          await addRecord(record);
           count++;
         } catch (error) {
           if (record.photoId) await mediaDelete(record.photoId);

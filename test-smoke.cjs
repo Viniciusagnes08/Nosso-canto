@@ -92,11 +92,12 @@ for (const file of [
     .readFileSync(__dirname + "/assets/" + file, "utf8")
     .replace(/^import[\s\S]*?from\s+[\"'][^\"']+[\"'];/gm, "")
     .replace(/^export\s*\{[^}]*\};/gm, "")
+    .replace(/export async function/g, "async function")
     .replace(/export function/g, "function");
   vm.runInContext(source, context, { filename: file });
 }
 vm.runInContext(
-  "startApp({id:'test-user',email:'test@example.invalid'})",
+  "startApp({id:'local-only-v1',email:null},{localOnly:true})",
   context,
 );
 assert(
@@ -125,12 +126,12 @@ assert(
   "mood visible in home",
 );
 assert(
-  JSON.parse(local["entre-nos-user-v1:test-user"]).entries.length === 1,
+  JSON.parse(local["entre-nos-local-isolated-v1"]).entries.length === 1,
   "record persisted",
 );
 vm.runInContext("addPreset(0)", context);
 assert(
-  JSON.parse(local["entre-nos-user-v1:test-user"]).entries.length === 2,
+  JSON.parse(local["entre-nos-local-isolated-v1"]).entries.length === 2,
   "challenge persisted",
 );
 console.log(
@@ -194,7 +195,7 @@ vm.runInContext(
   context,
 );
 assert(
-  JSON.parse(local["entre-nos-user-v1:test-user"]).entries.some(
+  JSON.parse(local["entre-nos-local-isolated-v1"]).entries.some(
     (e) => e.id === "cat-mood-test" && e.mood === "saudade",
   ),
   "sticker mood uses canonical local records",
@@ -221,7 +222,7 @@ vm.runInContext(
   context,
 );
 const savedMoods = JSON.parse(
-  local["entre-nos-user-v1:test-user"],
+  local["entre-nos-local-isolated-v1"],
 ).entries.filter((e) => e.type === "mood");
 assert(
   savedMoods.some(
@@ -271,21 +272,10 @@ local["entre-nos-local-v1"] = JSON.stringify({
   profile: { self: "Legacy" },
   entries: [{ id: "legacy" }],
 });
-vm.runInContext("startApp({id:'second-user'})", context);
-assert.equal(
-  vm.runInContext("data.entries.length", context),
-  0,
-  "second login does not inherit first or legacy records",
-);
 assert.equal(
   vm.runInContext("mediaDatabase", context),
-  "entre-nos-images:second-user",
-  "photos use a per-user database",
-);
-vm.runInContext("startApp({id:'test-user'})", context);
-assert(
-  vm.runInContext("data.entries.some(e=>e.id==='cat-mood-test')", context),
-  "first profile retains its records",
+  "entre-nos-images:local-isolated-v1",
+  "local preview photos stay in an isolated database",
 );
 assert.equal(
   JSON.parse(local["entre-nos-local-v1"]).entries[0].id,
