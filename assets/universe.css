@@ -61,3 +61,10 @@
 @media(max-width:720px){.universe-view{padding:0 5px 90px;}.universe-hero{grid-template-columns:1fr;min-height:auto;}.universe-hero-content{padding:32px 27px 12px;}.universe-hero h1{font-size:50px;}.universe-art{min-height:190px;}.universe-art-circle{width:180px;}.universe-art-note{font-size:106px;left:31%;}.universe-art-flower{font-size:84px;right:22%;}.universe-control-heading h2{font-size:29px;}.universe-controls{margin-top:26px;}.universe-kind-pills{overflow-x:auto;flex-wrap:nowrap;width:100%;padding-bottom:3px;}.universe-kind-pills button{white-space:nowrap;}.universe-toolbar{display:block;}.universe-search-label input{width:100%;margin-top:13px;}.universe-grid{grid-template-columns:1fr;gap:13px;}.universe-card-body{padding:18px;}.universe-list-heading{align-items:start;}.universe-topic-pills button{flex:1;padding:12px 8px;}.universe-topic-pills{gap:6px;}}
 @media(prefers-reduced-motion:reduce){.universe-view *, .universe-view *:before,.universe-view *:after{transition:none!important;animation:none!important;scroll-behavior:auto!important;}}
 
+
+/* Personal interests are edited once in Meu cantinho, never shared with another profile. */
+.universe-heading-actions{display:flex;flex-wrap:wrap;gap:9px;align-items:center;margin-bottom:13px;}
+.universe-heading-actions button{padding:10px 14px;font-size:12px;border-radius:30px;background:#fffaf9;color:#835e7b;border:1px solid #e5d2db;}
+.universe-heading-actions #universe-refresh{margin:0;}
+.universe-configure-button{background:#76577c;color:#fff;border:0;border-radius:13px;margin-top:17px;padding:12px 18px;font-size:12px;font-weight:750;}
+@media(max-width:620px){.universe-control-heading{align-items:flex-start;flex-direction:column;gap:2px;}.universe-heading-actions{margin-bottom:13px;}}
