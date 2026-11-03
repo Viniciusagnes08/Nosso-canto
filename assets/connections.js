@@ -88,7 +88,7 @@ export function connectionCards() {
     })
     .join(
       "",
-    )}<p class="form-hint">Nada é importado sem sua escolha. As cópias que você guardar ficam no seu perfil neste navegador; a sincronização entre vocês ainda não está ativa.</p></section>`;
+    )}<p class="form-hint">Nada é importado sem sua escolha. O conteúdo começa privado na sua conta; quando você marcar como compartilhado, aparece para vocês dois.</p></section>`;
 }
 async function googleConnect(provider) {
   if (!config.GOOGLE_CLIENT_ID)
