@@ -14,7 +14,7 @@ const config = Object.fromEntries(
   ].map((key) => [key, process.env[key] || (key === "AUTH_PROVIDER" ? "firebase" : "")]),
 );
 await build({
-  entryPoints: ["assets/boot.js", "assets/spotify-callback.js"],
+  entryPoints: ["assets/boot.js", "assets/spotify-callback.js", "assets/universe.js"],
   outdir: "dist/assets",
   bundle: true,
   splitting: true,
@@ -35,6 +35,7 @@ for (const file of [
   "layout.css",
   "account.css",
   "mood.css",
+  "universe.css",
   "icon.svg",
 ])
   await cp("assets/" + file, new URL("assets/" + file, output));
