@@ -221,7 +221,7 @@ function chooseRows(items, toRecord, extra = "") {
 }
 async function calendar() {
   await googleConnect("calendar");
-  const d = modal("Sua agenda", "<p>Buscando suas agendas…</p>");
+  const d = modal("Sua agenda", "<p>Importando todos os eventos das suas agendas…</p>");
   const all = [];
   let next;
   do {
@@ -235,31 +235,23 @@ async function calendar() {
     next = page.nextPageToken;
   } while (next && all.length < 500);
   if (!active()) return;
-  d.querySelector("#connectionBody").innerHTML =
-    `<div class="field"><label for="calendarSource">Qual agenda?</label><select id="calendarSource">${all
-      .filter((x) => !x.deleted)
-      .map(
-        (x) =>
-          `<option value="${safe(x.id)}">${safe(x.summary || "Agenda")}</option>`,
-      )
-      .join(
-        "",
-      )}</select></div><button id="loadEvents" class="btn btn-soft">Ver próximos 30 dias</button><div id="eventChoices"></div>`;
-  d.querySelector("#loadEvents").onclick = async (e) => {
-    e.target.disabled = true;
-    try {
-      const id = d.querySelector("#calendarSource").value,
-        now = new Date(),
-        end = new Date(now);
-      end.setDate(end.getDate() + 30);
-      const entries = [];
+  try {
+      const now = new Date();
+      const start = new Date(now);
+      start.setFullYear(start.getFullYear() - 1);
+      const end = new Date(now);
+      end.setFullYear(end.getFullYear() + 2);
+      const records = [];
+      for (const calendarInfo of all.filter((x) => !x.deleted)) {
+        const id = calendarInfo.id;
+        const entries = [];
       let pageToken;
       do {
         const u = new URL(
           `https://www.googleapis.com/calendar/v3/calendars/${encodeURIComponent(id)}/events`,
         );
         u.search = new URLSearchParams({
-          timeMin: now.toISOString(),
+          timeMin: start.toISOString(),
           timeMax: end.toISOString(),
           singleEvents: "true",
           orderBy: "startTime",
@@ -270,32 +262,14 @@ async function calendar() {
         entries.push(...(page.items || []));
         pageToken = page.nextPageToken;
       } while (pageToken && entries.length < 500);
-      if (!active()) return;
-      const items = entries
-        .filter((x) => x.status !== "cancelled")
-        .map((x) => ({
-          raw: x,
-          label: x.summary || "Compromisso",
-          detail:
-            x.start?.date ||
-            new Date(x.start?.dateTime).toLocaleString("pt-BR"),
-        }));
-      chooseRows(
-        items,
-        (item) =>
-          eventToRecord(
-            item,
-            id,
-            Boolean(d.querySelector("#busyOnly")?.checked),
-          ),
-        '<label class="toggle-label"><input id="busyOnly" type="checkbox">Guardar somente “Horário ocupado”, sem título do evento</label>',
-      );
+        records.push(...entries
+          .filter((x) => x.status !== "cancelled")
+          .map((raw) => eventToRecord(raw, id, false)));
+      }
+      await importSelected(records);
     } catch (err) {
       feedback(err.message);
-    } finally {
-      e.target.disabled = false;
     }
-  };
 }
 async function photos() {
   await googleConnect("photos");
@@ -613,4 +587,5 @@ export function initConnections(user, handlers) {
     }
   });
 }
+
 
