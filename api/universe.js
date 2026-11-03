@@ -1,7 +1,21 @@
 // Server-side discovery from fixed public sources. No private user data is sent.
 const TOPICS = {
   bts: { news: "BTS 방탄소년단 música when:30d", channel: "UCLkAepWjdylmXSltofFvsYQ", music: "BTS" },
-  ballet: { news: "ballet dança clássica espetáculo when:30d", channel: "UCHS5XKgf2FCBF8pZllE_bjw", music: "Tchaikovsky Swan Lake" }
+  ballet: { news: "ballet dança clássica espetáculo when:30d", channel: "UCHS5XKgf2FCBF8pZllE_bjw", music: "Tchaikovsky Swan Lake" },
+  tecnologia: { news: "tecnologia inovação lançamentos when:30d" },
+  games: { news: "games videogames jogos eletrônicos when:30d" },
+  historia: { news: "história arqueologia descobertas históricas when:30d" },
+  ciencia: { news: "ciência espaço pesquisa descobertas when:30d" },
+  cinema: { news: "cinema filmes estreias when:30d" },
+  fotografia: { news: "fotografia câmeras fotógrafos when:30d" },
+  automoveis: { news: "automóveis carros lançamentos when:30d" },
+  esportes: { news: "esportes competições resultados when:30d" },
+  viagens: { news: "viagens destinos turismo when:30d" },
+  gastronomia: { news: "gastronomia restaurantes receitas when:30d" },
+  livros: { news: "livros literatura lançamentos when:30d" },
+  negocios: { news: "negócios empreendedorismo empresas when:30d" },
+  musica: { news: "música novos álbuns artistas when:30d", music: "música brasileira" },
+  anime: { news: "anime animação japonesa lançamentos when:30d" }
 };
 const KINDS = new Set(["news", "videos", "music"]);
 const decodeXml = (raw = "") => String(raw)
@@ -78,10 +92,12 @@ async function getItems(topic, kind) {
     return parseNewsFeed(await fetchLimited(url.href), topic);
   }
   if (kind === "videos") {
+    if (!t.channel) return [];
     const url = new URL("https://www.youtube.com/feeds/videos.xml");
     url.searchParams.set("channel_id", t.channel);
     return parseVideoFeed(await fetchLimited(url.href), topic);
   }
+  if (!t.music) return [];
   const url = new URL("https://itunes.apple.com/search");
   for (const [key, value] of Object.entries({ term: t.music, media: "music", entity: "song", country: "BR", limit: "35" }))
     url.searchParams.set(key, value);
