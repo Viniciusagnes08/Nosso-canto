@@ -1,0 +1,31 @@
+name: Revisão Perfis Reels Universo
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [fix/reels-perfis-universo-pessoal-20261103]
+
+permissions:
+  contents: read
+
+jobs:
+  tests-and-build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - name: Checkout
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Node 22
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: "22"
+          cache: npm
+      - name: Dependencies
+        run: npm ci
+      - name: Unit and smoke tests
+        run: npm test
+      - name: Production bundle
+        run: npm run build
