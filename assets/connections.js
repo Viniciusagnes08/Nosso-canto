@@ -18,6 +18,7 @@ const SCOPES = {
   photos: "https://www.googleapis.com/auth/photospicker.mediaitems.readonly",
   calendar:
     "https://www.googleapis.com/auth/calendar.events.readonly https://www.googleapis.com/auth/calendar.calendarlist.readonly",
+  youtube: "https://www.googleapis.com/auth/youtube.readonly",
 };
 const spotifyKey = () => `nc-spotify:${contextUser.id}`;
 const pendingKey = "nc-oauth:spotify";
@@ -73,6 +74,11 @@ export function connectionCards() {
       "spotify",
       "Spotify",
       "Escolha suas favoritas e as músicas ouvidas recentemente.",
+    ],
+    [
+      "youtube",
+      "YouTube",
+      "Importe playlists e vídeos salvos para o nosso cantinho.",
     ],
   ]
     .map(([id, name, desc]) => {
@@ -543,6 +549,41 @@ async function spotify() {
       }),
   );
 }
+async function youtube() {
+  await googleConnect("youtube");
+  const d = modal("Seu YouTube", "<p>Buscando suas playlists…</p>");
+  try {
+    const page = await jsonFetch(
+      "https://www.googleapis.com/youtube/v3/playlists?part=snippet,contentDetails&mine=true&maxResults=50",
+      tokenFor("youtube"),
+    );
+    const playlists = page.items || [];
+    if (!playlists.length) {
+      feedback("Nenhuma playlist encontrada nessa conta do YouTube.");
+      return;
+    }
+    d.querySelector("#connectionBody").innerHTML = `<p>Escolha uma playlist para importar seus vídeos salvos.</p><div class="connection-choices">${playlists.map((p, i) => `<label class="connection-choice"><input type="radio" name="yt-playlist" value="${i}"><span><strong>${safe(p.snippet?.title || "Playlist")}</strong><small>${safe(String(p.contentDetails?.itemCount || 0))} vídeo(s)</small></span></label>`).join("")}</div><button id="importYoutube" class="btn btn-primary">Importar playlist</button>`;
+    d.querySelector("#importYoutube").onclick = async (e) => {
+      const selected = d.querySelector('input[name="yt-playlist"]:checked');
+      if (!selected) return feedback("Escolha uma playlist.");
+      e.target.disabled = true;
+      try {
+        const playlist = playlists[Number(selected.value)];
+        const items = await jsonFetch(`https://www.googleapis.com/youtube/v3/playlistItems?part=snippet&playlistId=${encodeURIComponent(playlist.id)}&maxResults=50`, tokenFor("youtube"));
+        const records = (items.items || []).filter((x) => x.snippet?.resourceId?.videoId).map((x) => ({
+          type: "music",
+          title: x.snippet.title || "Vídeo do YouTube",
+          date: localDay(),
+          source: "youtube",
+          externalId: x.snippet.resourceId.videoId,
+          url: `https://www.youtube.com/watch?v=${x.snippet.resourceId.videoId}`,
+          shared: true,
+        }));
+        await importSelected(records);
+      } catch (err) { feedback(err.message); } finally { e.target.disabled = false; }
+    };
+  } catch (err) { feedback(err.message); }
+}
 async function disconnect(provider) {
   if (provider === "spotify") {
     sessionStorage.removeItem(spotifyKey());
@@ -577,7 +618,7 @@ export function initConnections(user, handlers) {
         await disconnect(button.dataset.disconnect);
       else {
         const id = button.dataset.connect;
-        await { photos, calendar, spotify }[id]();
+        await { photos, calendar, spotify, youtube }[id]();
       }
     } catch (err) {
       if (active()) feedback(err.message);
