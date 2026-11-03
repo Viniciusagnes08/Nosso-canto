@@ -32,6 +32,9 @@ const context = {
     return "<section>Connections</section>";
   },
   initConnections() {},
+  installMemoryGallery() {},
+  installMusicEmbed() {},
+  spotifyEmbedUrl() { return ""; },
   logout() {},
   sessionStorage: {
     getItem() {
