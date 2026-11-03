@@ -4,6 +4,7 @@ import { readFile } from "node:fs/promises";
 import { topicsForProfile, normalizeUniverseTopics } from "../assets/universe-topics.js";
 import { cleanProfile } from "../assets/reels-model.js";
 import { isUploadFilename, visibleMediaCaption } from "../assets/reels-caption.js";
+import { validateProfileImage } from "../assets/profile-image.js";
 import universeHandler from "../api/universe.js";
 
 test("each account has independently selected topics, not BTS/Ballet for everyone", () => {
@@ -15,6 +16,11 @@ test("each account has independently selected topics, not BTS/Ballet for everyon
   assert.deepEqual(topicsForProfile({ universeTopics: [] }), []);
   assert.deepEqual(topicsForProfile({ interests: "BTS, ballet" }), ["bts", "ballet"]);
   assert.deepEqual(normalizeUniverseTopics(["tecnologia", "invalid", "tecnologia"]), ["tecnologia"]);
+});
+test("profile photos reject unsupported formats and oversized files before decoding", () => {
+  assert.equal(validateProfileImage({ type: "image/jpeg", size: 1024 }), true);
+  assert.throws(() => validateProfileImage({ type: "image/gif", size: 1024 }), /JPG, PNG ou WebP/);
+  assert.throws(() => validateProfileImage({ type: "image/png", size: 7 * 1024 * 1024 }), /até 6 MB/);
 });
 test("reels caption never exposes automatic filename or synthetic title", () => {
   assert.equal(isUploadFilename("19dad113-8ce6-4322-8849-f6a98b2a7931.jpg"), true);
@@ -59,3 +65,4 @@ test("only one editable profile and own personal topic selection remain",async()
   assert.doesNotMatch(universe,/const TOPICS = \["bts", "ballet"\]/);
   assert.match(universe,/state\.topics\.includes\(item\.topic\)/);
 });
+
