@@ -26,6 +26,7 @@ const titles = {
   recovery: ["Um novo começo.", "Escolha uma nova senha para sua conta."],
 };
 export function renderAccount(message = "") {
+  if (config.AUTH_PROVIDER === "firebase") return renderGoogleAccount(message);
   panel.hidden = true;
   root.hidden = false;
   root.classList.toggle("account-unconfigured", !authConfigured);
@@ -173,7 +174,7 @@ async function enter() {
   panel.hidden = false;
   try {
     const app = await import("./app.js");
-    app.startApp(user);
+    await app.startApp(user);
     started = true;
   } catch {
     panel.hidden = true;
@@ -219,3 +220,25 @@ async function boot() {
   }
 }
 boot();
+
+function renderGoogleAccount(message = "") {
+  panel.hidden = true;
+  root.hidden = false;
+  root.classList.remove('account-unconfigured');
+  root.innerHTML = `<div class="account-story"><a class="account-brand" href="/">♡ entre nós.</a><span class="eyebrow">UM AMOR, DOIS LUGARES</span><h1>Perto,<br>mesmo <em>de longe.</em></h1><p>Um lugar para os pequenos detalhes da nossa história.</p></div><section class="account-form-panel"><div class="account-form-inner"><span class="eyebrow">NOSSO CANTINHO</span><h2>Seu lugar é aqui.</h2><p>Entre com sua conta Google. Você continuará conectado neste aparelho até escolher sair.</p><p id="accountFeedback" role="status" aria-live="polite">${safe(message)}</p><button id="googleLogin" class="btn btn-primary account-submit">Entrar com Google</button><p class="account-footnote">Usamos seu nome, e-mail e foto de perfil. Não temos acesso às mensagens do seu Gmail.</p></div></section>`;
+  root.querySelector('#googleLogin').addEventListener('click', async e => {
+    e.currentTarget.disabled = true;
+    try {
+      await auth.auth.signInWithOAuth({ provider: 'google' });
+      await enter();
+    } catch (error) {
+      const messages = {
+        'auth/popup-closed-by-user': 'A janela foi fechada. Clique novamente para entrar.',
+        'auth/popup-blocked': 'Permita a janela de entrada do Google neste navegador e tente novamente.',
+        'auth/unauthorized-domain': 'Este endereço ainda não foi autorizado para entrar com Google.',
+        'auth/network-request-failed': 'Confira sua conexão e tente novamente.',
+      };
+      renderGoogleAccount(messages[error?.code] || 'Não foi possível entrar. Tente novamente.');
+    }
+  });
+}

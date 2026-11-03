@@ -1,6 +1,7 @@
+import { firebaseAdapter } from "./firebase-auth.js";
 import { createClient } from "@supabase/supabase-js";
 import { config, authConfigured } from "./config.js";
-export const auth = authConfigured
+export const auth = config.AUTH_PROVIDER === "firebase" ? firebaseAdapter() : authConfigured
   ? createClient(config.SUPABASE_URL, config.SUPABASE_PUBLISHABLE_KEY, {
       auth: {
         storage: sessionStorage,

@@ -5,12 +5,13 @@ await mkdir(output, { recursive: true });
 // Only these public values may enter the browser bundle. No secrets are used.
 const config = Object.fromEntries(
   [
+    "AUTH_PROVIDER",
     "SUPABASE_URL",
     "SUPABASE_PUBLISHABLE_KEY",
     "GOOGLE_CLIENT_ID",
     "SPOTIFY_CLIENT_ID",
     "GOOGLE_LOGIN_ENABLED",
-  ].map((key) => [key, process.env[key] || ""]),
+  ].map((key) => [key, process.env[key] || (key === "AUTH_PROVIDER" ? "firebase" : "")]),
 );
 await build({
   entryPoints: ["assets/boot.js", "assets/spotify-callback.js"],

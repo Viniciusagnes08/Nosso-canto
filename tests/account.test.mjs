@@ -11,7 +11,7 @@ async function fixture(configured) {
     write: false,
     define: {
       __PUBLIC_CONFIG__: JSON.stringify(
-        configured
+        configured === "firebase" ? { AUTH_PROVIDER: "firebase" } : configured
           ? {
               SUPABASE_URL: "https://example.supabase.co",
               SUPABASE_PUBLISHABLE_KEY: "public-test",
@@ -106,5 +106,15 @@ test("invalid password does not reveal the private application", async () => {
       .querySelector("#accountFeedback")
       .textContent.includes("Confira o e-mail"),
   );
+  dom.window.close();
+});
+
+test("Firebase login shows Google only and explains persistent session", async () => {
+  const dom = await fixture("firebase"), d = dom.window.document;
+  assert.equal(d.querySelector("#googleLogin").disabled, false);
+  assert.equal(d.querySelector("#accountPassword"), null);
+  assert.equal(d.querySelector("#localOnlyEntry"), null);
+  assert.equal(d.querySelector("#privateApp").hidden, true);
+  assert.match(d.querySelector("#accountRoot").textContent, /continuará conectado/);
   dom.window.close();
 });

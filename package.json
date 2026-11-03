@@ -11,6 +11,8 @@
     "build": "node scripts/build.mjs"
   },
   "dependencies": {
+    "@firebase/app": "0.16.5",
+    "@firebase/auth": "1.13.9",
     "@supabase/supabase-js": "2.118.0"
   },
   "devDependencies": {
