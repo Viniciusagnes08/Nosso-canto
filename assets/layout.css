@@ -8,6 +8,7 @@
 body {
   min-width: 320px;
 }
+#modeBanner[hidden] { display: none !important; }
 .skip-link {
   position: fixed;
   left: 16px;
