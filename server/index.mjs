@@ -192,8 +192,9 @@ http.createServer(async (req,res) => {
     if(!item.isFile()) return send(res,404,{error:"Arquivo não encontrado."});
     const ext=file.split(".").at(-1);
     const types={html:"text/html; charset=utf-8",js:"text/javascript; charset=utf-8",css:"text/css",svg:"image/svg+xml",json:"application/json",webmanifest:"application/manifest+json"};
-    res.writeHead(200,{"Content-Type":types[ext]||"application/octet-stream","Cache-Control":ext==="html"?"no-cache":"public, max-age=3600"});
+    res.writeHead(200,{"Content-Type":types[ext]||"application/octet-stream","Cache-Control":["html","js","css"].includes(ext)?"no-cache":"public, max-age=3600"});
     res.end(await readFile(file));
   } catch(error) { send(res, /Entre novamente|JWT|token|Sessão inválida/.test(error.message)?401:500,{error:error.message}); }
 }).listen(Number(process.env.PORT || 8766),"0.0.0.0");
+
 
