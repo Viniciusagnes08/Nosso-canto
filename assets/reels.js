@@ -221,6 +221,7 @@ async function setShare(item) {
     if (item.storagePath) await updateMetadata(fileRef(storage(), item.storagePath), { customMetadata: { authorId: userId(), shared: "true" } });
     await updateDoc(doc(getFirestore(getApp()), "spaces", SPACE_ID, "entries", item.id), { shared: true, updatedAt: serverTimestamp() });
   } catch {
+    if (item.storagePath) await updateMetadata(fileRef(storage(), item.storagePath), { customMetadata: { authorId: userId(), shared: "false" } }).catch(() => {});
     window.alert("Não foi possível compartilhar. Verifique a conexão e as permissões.");
   }
 }
@@ -228,8 +229,9 @@ async function removePost(item) {
   if (!canEditPost(item, userId()) || item.type !== "reel") return;
   if (!window.confirm("Apagar esta publicação do feed? Essa ação não pode ser desfeita.")) return;
   try {
+    // Delete the protected file before its record to avoid silent orphaned media.
+    if (item.storagePath) await deleteObject(fileRef(storage(), item.storagePath));
     await deleteDoc(doc(getFirestore(getApp()), "spaces", SPACE_ID, "entries", item.id));
-    if (item.storagePath) await deleteObject(fileRef(storage(), item.storagePath)).catch(() => {});
   } catch {
     window.alert("Não foi possível remover a publicação.");
   }
@@ -416,9 +418,12 @@ function install() {
     }
   });
   document.addEventListener("click", event => {
-    if (event.target.closest("[data-reels-open]")) {
+    if (event.target.closest("[data-reels-open],[data-reels-profile-open]")) {
       event.preventDefault();
-      if (!document.querySelector("#privateApp")?.hidden) open();
+      if (!document.querySelector("#privateApp")?.hidden) {
+        open();
+        if (event.target.closest("[data-reels-profile-open]")) { state.screen = "profile"; render(); }
+      }
     }
   });
   document.addEventListener("visibilitychange", () => {
