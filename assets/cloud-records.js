@@ -57,7 +57,7 @@ export async function connectRecords(userId, initialRecords, receive, failure, i
   const own = new Map(), shared = new Map();
   let publishing = Promise.resolve();
   const publish = () => {
-    const snapshot = [...new Map([...shared, ...own]).values()];
+    const snapshot = [...new Map([...shared, ...own]).values()].filter(row => row.type !== "universe");
     publishing = publishing.then(async () => receive(await Promise.all(snapshot.map((row) => hydrate(row, userId))))).catch(failure);
   };
   const listen = (filter, target) => onSnapshot(query(records, filter), (snapshot) => {
