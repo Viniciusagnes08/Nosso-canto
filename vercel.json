@@ -33,7 +33,7 @@
         },
         {
           "key": "Content-Security-Policy",
-          "value": "default-src 'self'; script-src 'self' https://apis.google.com https://www.gstatic.com https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; connect-src 'self' https://*.supabase.co https://*.googleapis.com https://accounts.google.com/gsi/ https://accounts.spotify.com https://api.spotify.com https://api.adviceslip.com https://firebasestorage.googleapis.com https://storage.googleapis.com; frame-src https://accounts.google.com https://nosso-canto-19a39.firebaseapp.com; img-src 'self' data: blob: https://i.ytimg.com https://*.mzstatic.com; media-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
+          "value": "default-src 'self'; script-src 'self' https://apis.google.com https://www.gstatic.com https://accounts.google.com/gsi/; style-src 'self' 'unsafe-inline' https://accounts.google.com/gsi/; connect-src 'self' https://*.supabase.co https://*.googleapis.com https://accounts.google.com/gsi/ https://accounts.spotify.com https://api.spotify.com https://api.adviceslip.com https://firebasestorage.googleapis.com https://storage.googleapis.com; frame-src https://accounts.google.com https://nosso-canto-19a39.firebaseapp.com https://open.spotify.com; img-src 'self' data: blob: https://i.ytimg.com https://*.mzstatic.com; media-src 'self' blob:; font-src 'self'; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'"
         }
       ]
     },
