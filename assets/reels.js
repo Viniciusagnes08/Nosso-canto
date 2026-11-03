@@ -147,11 +147,19 @@ function feedHtml() {
     '</div>';
 }
 function composeHtml() {
+  const storageEnabled = Boolean(config.FIREBASE_STORAGE_BUCKET);
+  const mediaHelp = storageEnabled
+    ? "JPG, PNG, WebP até 12 MB · GIF até 8 MB · MP4 e WebM até 24 MB"
+    : "JPG, PNG e WebP até 12 MB · Vídeos e GIFs temporariamente indisponíveis";
+  const mediaLabel = storageEnabled ? "foto, vídeo ou GIF" : "foto";
+  const accept = storageEnabled
+    ? "image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"
+    : "image/jpeg,image/png,image/webp";
   return '<dialog id="reels-compose" class="reels-compose"><form id="reels-post-form">' +
     '<div class="reels-compose-head"><span>CRIAR UMA MEMÓRIA</span><button type="button" data-reels-cancel aria-label="Fechar">×</button></div>' +
-    '<h2>Um instante<br><em>para guardar.</em></h2><p>Uma foto, um vídeo curto ou uma animação. Aqui cada detalhe tem história.</p>' +
-    '<label class="reels-upload-area">+ Escolher foto, vídeo ou GIF<input required type="file" name="media" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm"></label>' +
-    '<div id="reels-file-preview" aria-live="polite">JPG, PNG, WebP até 12 MB · GIF até 8 MB · MP4 e WebM até 24 MB</div>' +
+    '<h2>Um instante<br><em>para guardar.</em></h2><p>' + (storageEnabled ? "Uma foto, um vídeo curto ou uma animação." : "Uma foto especial para guardar.") + ' Aqui cada detalhe tem história.</p>' +
+    '<label class="reels-upload-area">+ Escolher ' + mediaLabel + '<input required type="file" name="media" accept="' + accept + '"></label>' +
+    '<div id="reels-file-preview" aria-live="polite">' + mediaHelp + '</div>' +
     '<label class="reels-field">Legenda<textarea name="caption" maxlength="280" rows="3" placeholder="O que essa lembrança significa para você?"></textarea></label>' +
     '<p class="reels-sharing-note">Esta lembrança será compartilhada automaticamente no espaço de vocês dois.</p>' +
     '<button class="reels-primary" type="submit">Publicar lembrança</button><p id="reels-upload-status" role="status"></p>' +
@@ -370,4 +378,5 @@ export function mountReels(user, options = {}) {
     snapshot => { if (snapshot.exists()) { state.profile = cleanProfile(snapshot.data()); if (state.open) render(); } },
     () => {}));
 }
+
 

@@ -22,6 +22,12 @@ test("profile photos reject unsupported formats and oversized files before decod
   assert.throws(() => validateProfileImage({ type: "image/gif", size: 1024 }), /JPG, PNG ou WebP/);
   assert.throws(() => validateProfileImage({ type: "image/png", size: 7 * 1024 * 1024 }), /até 6 MB/);
 });
+test("reels compose hides video and GIF choices while Storage is unavailable", async () => {
+  const source = await readFile("assets/reels.js", "utf8");
+  assert.match(source, /const storageEnabled = Boolean\(config\.FIREBASE_STORAGE_BUCKET\)/);
+  assert.match(source, /Vídeos e GIFs temporariamente indisponíveis/);
+  assert.match(source, /image\/jpeg,image\/png,image\/webp/);
+});
 test("reels caption never exposes automatic filename or synthetic title", () => {
   assert.equal(isUploadFilename("19dad113-8ce6-4322-8849-f6a98b2a7931.jpg"), true);
   assert.equal(visibleMediaCaption({title:"19dad113-8ce6-4322-8849-f6a98b2a7931.jpg"}), "");
