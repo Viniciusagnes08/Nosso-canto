@@ -27,7 +27,7 @@ function validLink(value) {
 }
 function saveId(item) {
   // A stable, safe, deterministic ID for Firestore documents.
-  const raw = item.id + "|" + item.topic;
+  const raw = state.user + "|" + item.id + "|" + item.topic;
   let hash = 2166136261;
   for (const char of raw) hash = Math.imul(hash ^ char.charCodeAt(0), 16777619);
   return "u_" + (hash >>> 0).toString(36);
@@ -130,7 +130,8 @@ function initialView() {
   renderCards();
 }
 async function connectFavorites() {
-  const { data } = await auth?.auth?.getSession?.() || {};
+  let data = null;
+  try { ({ data } = await auth?.auth?.getSession?.() || {}); } catch {}
   state.user = data?.session?.user?.id || null;
   state.favorites = readLocal();
   renderCards();
@@ -239,7 +240,7 @@ document.addEventListener("click", (event) => {
     event.preventDefault();
     if (document.querySelector("#privateApp")?.hidden) return;
     if (!root) initialView();
-    if (state.user === null && !state.stop) void connectFavorites();
+    if (state.user === null && !state.stop) void connectFavorites().catch(() => {});
     open();
   } else if (event.target.closest("[data-nav]") && state.open) {
     state.open = false;
