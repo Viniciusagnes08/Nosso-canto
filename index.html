@@ -17,6 +17,7 @@
     <link rel="stylesheet" href="./assets/layout.css" />
     <link rel="stylesheet" href="./assets/account.css" />
     <link rel="stylesheet" href="./assets/mood.css" />
+    <link rel="stylesheet" href="./assets/universe.css" />
     <meta name="referrer" content="no-referrer" />
     <title>Entre N&oacute;s | Nosso cantinho</title>
   </head>
@@ -42,6 +43,7 @@
             >
           </a>
           <div class="sidebar-section-title">NOSSO ESPA&Ccedil;O</div>
+          <button type="button" class="universe-entry" data-universe-open><span aria-hidden="true">✧</span> Meu Universo <small>BTS &amp; Ballet</small></button>
           <nav class="nav-links" aria-label="Secoes">
             <button class="nav-link active" data-nav="inicio">
               <span class="nav-icon" aria-hidden="true">&#8962;</span>
@@ -113,6 +115,7 @@
         </div>
       </div>
       <nav class="mobile-nav" aria-label="Navegacao movel">
+        <button class="mobile-tab" type="button" data-universe-open><span aria-hidden="true">✧</span>Universo</button>
         <button class="mobile-tab active" data-nav="inicio">
           <span>&#8962;</span>In&iacute;cio
         </button>
@@ -169,5 +172,6 @@
       <div class="toast" id="toast" role="status" aria-live="polite"></div>
     </div>
     <script type="module" src="./assets/boot.js"></script>
+    <script type="module" src="./assets/universe.js"></script>
   </body>
 </html>
