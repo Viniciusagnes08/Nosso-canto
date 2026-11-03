@@ -60,6 +60,8 @@ O CI de integração do GitHub executou **`npm ci`, `npm test`, `npm run build` 
 
 Não publicamos regras nem ativamos produtos pagos. A prévia pode exigir autenticação da Vercel. **Nunca interpretar bloqueio 403 de preview como sucesso da funcionalidade.**
 
+**Auditoria de dependências:** o log de `npm ci` sinalizou **2 vulnerabilidades de severidade alta**. A identidade dos pacotes e o alcance em runtime não foram verificados nesta entrega. Rodar `npm audit --json`, identificar caminhos afetados e corrigir com alteração mínima testada antes de produção; **não** executar `npm audit fix --force` cegamente.
+
 ## 4. Validação obrigatória do Codex (executar na PR, sem refazer o código)
 
 ### Gate A — Integridade e sincronização
