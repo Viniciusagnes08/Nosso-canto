@@ -13,6 +13,7 @@
   "dependencies": {
     "@firebase/app": "0.16.5",
     "@firebase/auth": "1.13.9",
+    "@firebase/firestore": "4.19.1",
     "@supabase/supabase-js": "2.118.0"
   },
   "devDependencies": {

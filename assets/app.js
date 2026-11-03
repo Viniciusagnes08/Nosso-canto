@@ -105,7 +105,7 @@ function announce() {
   $("#topAvatar").textContent = initial(data.profile.self);
   $("#modeBanner").innerHTML = localOnly
     ? '<span><strong>Modo local ativo:</strong> registros guardados somente neste dispositivo. Não há conta nem sincronização entre vocês.</span><button class="text-link" data-nav="ajustes">Entender</button>'
-    : '<span><strong>Seu perfil neste aparelho:</strong> o login está ativo; os registros ainda não são sincronizados entre vocês.</span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
+    : '<span><strong>Seu perfil neste aparelho:</strong> estes registros são locais. <a href="/nosso-espaco.html">Abrir nosso espaço na nuvem →</a></span><button class="text-link" data-nav="ajustes">Meu perfil</button>';
 }
 function navigate(next) {
   if (

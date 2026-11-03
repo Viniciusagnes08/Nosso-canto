@@ -25,12 +25,14 @@ await build({
 });
 for (const file of [
   "index.html",
+  "nosso-espaco.html",
   "spotify-callback.html",
   "manifest.webmanifest",
 ])
   await cp(file, new URL(file, output));
 for (const file of [
   "styles.css",
+  "cloud.css",
   "layout.css",
   "account.css",
   "mood.css",

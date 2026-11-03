@@ -1,0 +1,28 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+    function member(space) {
+      return signedIn() && space == 'nosso-canto' && request.auth.token.email in
+        ['viniciusagnes1092@gmail.com', 'mirnacaterine@gmail.com'];
+    }
+    match /spaces/{space} {
+      allow read: if member(space);
+      // Membership is provisioned by the administrator, never by the browser.
+      allow write: if false;
+      match /entries/{entry} {
+        allow read: if member(space) &&
+          (resource.data.shared == true || resource.data.authorId == request.auth.uid);
+        allow create: if member(space) &&
+          request.resource.data.authorId == request.auth.uid &&
+          request.resource.data.shared is bool;
+        allow update: if member(space) && resource.data.authorId == request.auth.uid &&
+          request.resource.data.authorId == resource.data.authorId &&
+          request.resource.data.shared is bool;
+        allow delete: if member(space) && resource.data.authorId == request.auth.uid;
+      }
+    }
+  }
+}

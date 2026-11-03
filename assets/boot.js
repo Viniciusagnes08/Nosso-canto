@@ -78,7 +78,7 @@ async function enterLocalOnly() {
   root.hidden = true;
   panel.hidden = false;
   try {
-    const app = await import("./app.js");
+    const app = location.pathname.endsWith("nosso-espaco.html") ? await import("./cloud-screen.js") : await import("./app.js");
     app.startApp({ id: "local-only-v1" }, { localOnly: true });
     started = true;
   } catch {
@@ -173,7 +173,7 @@ async function enter() {
   root.hidden = true;
   panel.hidden = false;
   try {
-    const app = await import("./app.js");
+    const app = location.pathname.endsWith("nosso-espaco.html") ? await import("./cloud-screen.js") : await import("./app.js");
     await app.startApp(user);
     started = true;
   } catch {
