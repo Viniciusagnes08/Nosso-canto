@@ -44,6 +44,7 @@
               ><small>um lugar s&oacute; nosso</small></span
             >
           </a>
+          <div class="sidebar-scroll">
           <div class="sidebar-section-title">NOSSO ESPA&Ccedil;O</div>
           <button type="button" class="reels-menu-entry" data-reels-open><span aria-hidden="true">✧</span> Momentos <small>Nosso Reels</small></button>
           <button type="button" class="universe-entry" data-universe-open><span aria-hidden="true">✧</span> Meu Universo <small>Seus interesses</small></button>
@@ -78,6 +79,7 @@
             <span class="small-flower" aria-hidden="true">&#10047;</span>
             <p>Mesmo longe, sempre pertinho de voc&ecirc;.</p>
             <small>Com carinho, todos os dias.</small>
+          </div>
           </div>
           <button
             class="profile-link"
@@ -118,19 +120,11 @@
         </div>
       </div>
       <nav class="mobile-nav" aria-label="Navegacao movel">
-        <button class="mobile-tab" data-reels-open type="button"><span aria-hidden="true">▶</span>Reels</button>
-        <button class="mobile-tab" type="button" data-universe-open><span aria-hidden="true">✧</span>Universo</button>
         <button class="mobile-tab active" data-nav="inicio">
           <span>&#8962;</span>In&iacute;cio
         </button>
-        <button class="mobile-tab" data-nav="humor">
-          <span aria-hidden="true">♡</span>Humor
-        </button>
         <button class="mobile-tab" data-nav="diario">
           <span>&#9825;</span> Nosso dia
-        </button>
-        <button class="mobile-tab" data-nav="desafios">
-          <span>&#10038;</span>Desafios
         </button>
         <button class="mobile-tab" data-nav="memorias">
           <span>&#10047;</span>Fotos
@@ -138,9 +132,16 @@
         <button class="mobile-tab" data-nav="calendario">
           <span>&#9638;</span>Agenda
         </button>
-        <button class="mobile-tab" data-nav="musicas">
-          <span aria-hidden="true">&#9835;</span>Músicas
-        </button>
+        <button class="mobile-tab mobile-more-toggle" type="button" aria-expanded="false" aria-controls="mobileMore" aria-label="Abrir mais seções"><span aria-hidden="true">☷</span>Mais</button>
+        <div class="mobile-more" id="mobileMore" hidden>
+          <strong>Mais do nosso espaço</strong>
+          <button type="button" data-reels-open>Momentos</button>
+          <button type="button" data-universe-open>Meu Universo</button>
+          <button type="button" data-nav="humor">Humor</button>
+          <button type="button" data-nav="desafios">Desafios</button>
+          <button type="button" data-nav="musicas">Nossa trilha</button>
+          <button type="button" data-nav="ajustes">Perfil e ajustes</button>
+        </div>
       </nav>
       <dialog
         id="entryDialog"
@@ -180,4 +181,5 @@
     <script type="module" src="./assets/universe.js"></script>
   </body>
 </html>
+
 
