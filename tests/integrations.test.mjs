@@ -123,16 +123,13 @@ function response() {
   };
 }
 test("photo API rejects unauthenticated and misconfigured requests", async () => {
-  const oldUrl = process.env.SUPABASE_URL,
-    oldKey = process.env.SUPABASE_PUBLISHABLE_KEY;
+  const oldKey = process.env.FIREBASE_API_KEY;
   try {
-    delete process.env.SUPABASE_URL;
-    delete process.env.SUPABASE_PUBLISHABLE_KEY;
+    delete process.env.FIREBASE_API_KEY;
     let res = response();
     await handler({ method: "POST", headers: {} }, res);
     assert.equal(res.statusCode, 503);
-    process.env.SUPABASE_URL = "https://test.supabase.co";
-    process.env.SUPABASE_PUBLISHABLE_KEY = "test";
+    process.env.FIREBASE_API_KEY = "test";
     res = response();
     await handler({ method: "POST", headers: {} }, res);
     assert.equal(res.statusCode, 401);
@@ -140,10 +137,8 @@ test("photo API rejects unauthenticated and misconfigured requests", async () =>
     await handler({ method: "GET", headers: {} }, res);
     assert.equal(res.statusCode, 405);
   } finally {
-    if (oldUrl === undefined) delete process.env.SUPABASE_URL;
-    else process.env.SUPABASE_URL = oldUrl;
-    if (oldKey === undefined) delete process.env.SUPABASE_PUBLISHABLE_KEY;
-    else process.env.SUPABASE_PUBLISHABLE_KEY = oldKey;
+    if (oldKey === undefined) delete process.env.FIREBASE_API_KEY;
+    else process.env.FIREBASE_API_KEY = oldKey;
   }
 });
 test("poll timing follows provider duration strings", () => {

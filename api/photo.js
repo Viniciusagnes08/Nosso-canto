@@ -1,4 +1,24 @@
 const MAX_BYTES = 4 * 1024 * 1024;
+const ALLOWED_EMAILS = new Set([
+  "viniciusagnes1092@gmail.com",
+  "mirnacaterine@gmail.com",
+]);
+async function verifyFirebase(token) {
+  if (!process.env.FIREBASE_API_KEY) return null;
+  const response = await fetch(
+    `https://identitytoolkit.googleapis.com/v1/accounts:lookup?key=${encodeURIComponent(process.env.FIREBASE_API_KEY)}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ idToken: token }),
+      signal: AbortSignal.timeout(10000),
+      redirect: "error",
+    },
+  );
+  if (!response.ok) return null;
+  const user = (await response.json()).users?.[0];
+  return user?.emailVerified && ALLOWED_EMAILS.has(user.email) ? user : null;
+}
 export function validPhotoHost(value) {
   try {
     const u = new URL(value);
@@ -43,7 +63,7 @@ export default async function handler(req, res) {
     res.setHeader("Allow", "POST");
     return fail(405, "Método não permitido.");
   }
-  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_PUBLISHABLE_KEY)
+  if (!process.env.FIREBASE_API_KEY)
     return fail(503, "A importação ainda não está disponível.");
   if (!req.headers.authorization?.startsWith("Bearer "))
     return fail(401, "Entre novamente.");
@@ -71,21 +91,10 @@ export default async function handler(req, res) {
   )
     return fail(400, "Seleção inválida.");
   try {
-    // Validate the Supabase session online. Never trust a decoded client JWT alone.
-    const userResponse = await fetch(
-      process.env.SUPABASE_URL + "/auth/v1/user",
-      {
-        headers: {
-          apikey: process.env.SUPABASE_PUBLISHABLE_KEY,
-          Authorization: req.headers.authorization,
-        },
-        signal: AbortSignal.timeout(10000),
-        redirect: "error",
-      },
+    const user = await verifyFirebase(
+      req.headers.authorization.slice("Bearer ".length),
     );
-    if (!userResponse.ok) return fail(401, "Entre novamente.");
-    const user = await userResponse.json();
-    if (!user.id) return fail(401, "Entre novamente.");
+    if (!user) return fail(401, "Entre novamente.");
     const headers = { Authorization: `Bearer ${googleToken}` };
     const session = await fetch(
       `https://photospicker.googleapis.com/v1/sessions/${encodeURIComponent(sessionId)}`,
@@ -94,7 +103,7 @@ export default async function handler(req, res) {
     if (!session.ok || !(await session.json()).mediaItemsSet)
       return fail(403, "Conclua a seleção no Google Fotos.");
     let pageToken, selected;
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 20; i++) {
       const url = new URL("https://photospicker.googleapis.com/v1/mediaItems");
       url.search = new URLSearchParams({
         sessionId,

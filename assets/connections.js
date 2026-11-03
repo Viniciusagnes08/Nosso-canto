@@ -21,6 +21,7 @@ const SCOPES = {
 };
 const spotifyKey = () => `nc-spotify:${contextUser.id}`;
 const pendingKey = "nc-oauth:spotify";
+const MAX_PHOTO_SELECTION = 2000;
 function notify() {
   callbacks?.refresh?.();
 }
@@ -305,7 +306,9 @@ async function photos() {
     {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ pickingConfig: { maxItemCount: "20" } }),
+      body: JSON.stringify({
+        pickingConfig: { maxItemCount: String(MAX_PHOTO_SELECTION) },
+      }),
     },
   );
   if (!active()) return;
@@ -321,7 +324,7 @@ async function photos() {
       Date.now() + seconds(session.pollingConfig?.timeoutIn, 600) * 1000,
   };
   document.querySelector("#connectionBody").innerHTML =
-    `<p>Abra o Google Fotos, escolha até 20 fotos e conclua a seleção. Vídeos não são importados nesta versão.</p><a class="btn btn-primary" href="${safe(pickerUrl.href)}" target="_blank" rel="noopener noreferrer">Escolher no Google Fotos ↗</a><p class="form-hint">Esta janela verificará a conclusão enquanto estiver aberta.</p>`;
+    `<p>Abra o Google Fotos, escolha até ${MAX_PHOTO_SELECTION.toLocaleString("pt-BR")} fotos e conclua a seleção. Vídeos não são importados nesta versão.</p><a class="btn btn-primary" href="${safe(pickerUrl.href)}" target="_blank" rel="noopener noreferrer">Escolher no Google Fotos ↗</a><p class="form-hint">Uma seleção grande pode demorar e usar bastante armazenamento. Esta janela verificará a conclusão enquanto estiver aberta.</p>`;
   const current = picker;
   async function poll() {
     if (!active() || picker !== current) return;
@@ -350,10 +353,13 @@ async function photos() {
           const page = await jsonFetch(u, tokenFor("photos"));
           items.push(...(page.mediaItems || []));
           nextPageToken = page.nextPageToken;
-        } while (nextPageToken && items.length < 20);
-        const photos = items.filter((x) => x.type === "PHOTO").slice(0, 20);
+        } while (nextPageToken && items.length < MAX_PHOTO_SELECTION);
+        const photos = items
+          .filter((x) => x.type === "PHOTO")
+          .slice(0, MAX_PHOTO_SELECTION);
+        const preview = photos.slice(0, 100);
         document.querySelector("#connectionBody").innerHTML =
-          `<p>${photos.length} foto(s) selecionada(s). Guarde uma cópia no seu perfil neste navegador.</p><ul>${photos.map((x) => `<li>${safe(x.mediaFile?.filename || "Foto")}</li>`).join("")}</ul><button class="btn btn-primary" id="savePhotos" ${photos.length ? "" : "disabled"}>Guardar fotos selecionadas</button>`;
+          `<p>${photos.length} foto(s) selecionada(s). As cópias serão guardadas na sua conta do Nosso Canto.</p><ul>${preview.map((x) => `<li>${safe(x.mediaFile?.filename || "Foto")}</li>`).join("")}</ul>${photos.length > preview.length ? `<p class="form-hint">E mais ${photos.length - preview.length} foto(s).</p>` : ""}<button class="btn btn-primary" id="savePhotos" ${photos.length ? "" : "disabled"}>Guardar fotos selecionadas</button>`;
         document.querySelector("#savePhotos").onclick = async (e) => {
           if (busy) return;
           busy = true;

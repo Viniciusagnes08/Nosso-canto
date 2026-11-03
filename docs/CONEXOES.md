@@ -39,7 +39,7 @@ Escopos solicitados incrementalmente:
 - Fotos: `https://www.googleapis.com/auth/photospicker.mediaitems.readonly`.
 - Agenda: `https://www.googleapis.com/auth/calendar.events.readonly` e `https://www.googleapis.com/auth/calendar.calendarlist.readonly`.
 
-O usuário seleciona até 20 fotos. A função autenticada confirma a sessão do Picker, encontra o item selecionado e baixa uma versão até 1600 px. Não aceita uma URL de download enviada pelo cliente. Vídeos não são importados.
+O usuário seleciona até 2.000 fotos por sessão, o limite oficial do Picker. A função autenticada confirma a conta Firebase e a sessão do Picker, encontra o item selecionado e baixa uma versão até 1600 px. Não aceita uma URL de download enviada pelo cliente. Vídeos não são importados. Seleções grandes podem demorar e consumir o limite gratuito de armazenamento.
 
 Agenda lista calendários e eventos dos próximos 30 dias, até 500. Só grava os itens marcados; a opção “Horário ocupado” não guarda título nem descrição do evento. Não escreve no Google e não realiza sincronização contínua.
 
