@@ -59,9 +59,9 @@ function card(item, saved = false) {
     (isSaved ? '♥ Salvo' : '♡ Salvar') + '</button></div></div></article>';
 }
 function allItems() {
-  const collected = [...QUOTES.filter(q => state.topics.includes(q.topic)).map((q, i) => ({
+  const collected = [...QUOTES.map((q, i) => ({
     id: "quote:" + i, topic: q.topic, kind: "quotes", ...q, url: ""
-  }))];
+  })).filter(q => state.topics.includes(q.topic))];
   for (const topic of state.topics) for (const kind of TYPES.slice(0, 3))
     collected.push(...(state.items[topic + ":" + kind] || []));
   return collected;
