@@ -9,5 +9,9 @@ test("cloud rules restrict the couple space and preserve private ownership", asy
   assert.match(rules, /resource\.data\.shared == true \|\| resource\.data\.authorId == request\.auth\.uid/);
   assert.match(rules, /request\.resource\.data\.authorId == request\.auth\.uid/);
   assert.match(rules, /allow write: if false/);
+  assert.match(rules, /match \/profiles\/\{profileId\}/);
+  assert.match(rules, /profileId == request\.auth\.uid/);
+  assert.match(rules, /allow delete: if false/);
   assert.doesNotMatch(rules, /allow read, write: if true/);
 });
+

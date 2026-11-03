@@ -994,13 +994,14 @@ window.addEventListener("click", async (e) => {
     return;
   }
 });
-document.addEventListener("submit", (e) => {
+document.addEventListener("submit", async (e) => {
   if (e.target.id === "entryForm") saveModal(e);
   if (e.target.id === "moodInlineForm") saveInlineMood(e);
   if (e.target.id === "profileForm") {
     e.preventDefault();
     const form = new FormData(e.target);
-    data.profile = {
+    const previous = { ...data.profile };
+    const profile = {
       self: String(form.get("self") || "Voc\u00ea")
         .trim()
         .slice(0, 40),
@@ -1009,9 +1010,22 @@ document.addEventListener("submit", (e) => {
         .slice(0, 40),
       anniversary: String(form.get("anniversary") || ""),
     };
-    persist();
-    render();
-    toast("Seu cantinho foi personalizado!");
+    const button = e.target.querySelector('button[type="submit"], button:not([type])');
+    if (button) button.disabled = true;
+    try {
+      if (!localOnly) {
+        if (!cloudSync) throw new Error("A nuvem ainda não está conectada.");
+        await cloudSync.saveProfile(profile);
+      }
+      data.profile = profile;
+      persist();
+      render();
+      toast(localOnly ? "Perfil local salvo." : "Perfil salvo e confirmado na nuvem.");
+    } catch (error) {
+      data.profile = previous;
+      if (button) button.disabled = false;
+      toast(error?.message || "Não foi possível confirmar o perfil na nuvem.");
+    }
   }
 });
 document.addEventListener("change", (e) => {
@@ -1069,6 +1083,12 @@ export async function startApp(user, options = {}) {
         },
         () => {
           cloudStatus = "error";
+          render();
+        },
+        data.profile,
+        (profile) => {
+          data.profile = profile;
+          persist();
           render();
         },
       );
@@ -1146,3 +1166,4 @@ export async function startApp(user, options = {}) {
   });
   navigate(tab);
 }
+

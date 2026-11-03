@@ -1,5 +1,5 @@
 import { getApp } from "@firebase/app";
-import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, serverTimestamp } from "@firebase/firestore";
+import { getFirestore, collection, doc, query, where, onSnapshot, setDoc, deleteDoc, getDoc, serverTimestamp } from "@firebase/firestore";
 import { mediaGet, mediaPut } from "./media.js";
 
 const SPACE_ID = "nosso-canto";
@@ -39,10 +39,19 @@ async function hydrate(raw, userId) {
   delete record.updatedAt;
   return record;
 }
-export async function connectRecords(userId, initialRecords, receive, failure) {
+const cleanProfile = (value = {}) => ({
+  self: String(value.self || "Você").trim().slice(0, 40),
+  partner: String(value.partner || "Seu amor").trim().slice(0, 40),
+  anniversary: /^\d{4}-\d{2}-\d{2}$/.test(String(value.anniversary || "")) ? String(value.anniversary) : "",
+});
+export async function connectRecords(userId, initialRecords, receive, failure, initialProfile, receiveProfile) {
   if (!userId) throw new Error("Entre para sincronizar.");
   const db = getFirestore(getApp());
   const records = collection(db, "spaces", SPACE_ID, "entries");
+  const profileRef = doc(db, "spaces", SPACE_ID, "profiles", userId);
+  const storedProfile = await getDoc(profileRef);
+  if (storedProfile.exists()) receiveProfile(cleanProfile(storedProfile.data()));
+  else await setDoc(profileRef, { ...cleanProfile(initialProfile), authorId: userId, updatedAt: serverTimestamp() });
   for (const record of initialRecords.filter((item) => !item.authorId || item.authorId === userId))
     await setDoc(doc(records, record.id), await serialize(record, userId), { merge: true });
   const own = new Map(), shared = new Map();
@@ -58,9 +67,16 @@ export async function connectRecords(userId, initialRecords, receive, failure) {
   }, failure);
   const stopOwn = listen(where("authorId", "==", userId), own);
   const stopShared = listen(where("shared", "==", true), shared);
+  const stopProfile = onSnapshot(profileRef, (snapshot) => {
+    if (snapshot.exists()) receiveProfile(cleanProfile(snapshot.data()));
+  }, failure);
   return {
     async save(record) { await setDoc(doc(records, record.id), await serialize(record, userId)); },
+    async saveProfile(profile) {
+      await setDoc(profileRef, { ...cleanProfile(profile), authorId: userId, updatedAt: serverTimestamp() });
+    },
     async remove(id) { await deleteDoc(doc(records, id)); },
-    close() { stopOwn(); stopShared(); own.clear(); shared.clear(); },
+    close() { stopOwn(); stopShared(); stopProfile(); own.clear(); shared.clear(); },
   };
 }
+

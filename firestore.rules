@@ -23,6 +23,13 @@ service cloud.firestore {
           request.resource.data.shared is bool;
         allow delete: if member(space) && resource.data.authorId == request.auth.uid;
       }
+      match /profiles/{profileId} {
+        allow read: if member(space) && profileId == request.auth.uid;
+        allow create, update: if member(space) && profileId == request.auth.uid &&
+          request.resource.data.authorId == request.auth.uid;
+        allow delete: if false;
+      }
     }
   }
 }
+
