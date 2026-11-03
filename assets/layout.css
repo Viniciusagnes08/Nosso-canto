@@ -381,3 +381,9 @@ main:focus {
     }
   }
 }
+
+/* Personal reels shortcut; keeps all existing routes intact. */
+.reels-menu-entry{display:flex;align-items:center;gap:9px;width:100%;text-align:left;border:1px solid #ead9e5;background:#f7edf2;color:#805572;border-radius:14px;padding:13px;font-size:13px;font-weight:750;margin:6px 0 15px;cursor:pointer;}
+.reels-menu-entry span{font-size:18px;color:#a57ca2;}
+.reels-menu-entry small{margin-left:auto;font-weight:500;font-size:10px;opacity:.8;}
+@media(max-width:720px){.reels-menu-entry{display:none;}.mobile-nav{overflow-x:auto;scrollbar-width:thin;}.mobile-nav>.mobile-tab{flex:0 0 auto;min-width:64px;}}
